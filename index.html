@@ -7,6 +7,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#1c1710">
+<meta name="apple-mobile-web-app-title" content="Land">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
   :root{
     --ink:#1c1710; --ink-2:#2a2318;
@@ -286,6 +294,15 @@
   .pb-land{color:var(--red);font-weight:800;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
   tr.paper-hit{background:#fdf4f1 !important;box-shadow:inset 3px 0 0 var(--red)}
   tr.paper-hit:hover{background:#fceee9 !important}
+  /* delete + select + pdf */
+  .btn-del-big{display:block;width:100%;margin-top:20px;padding:15px;border-radius:13px;background:linear-gradient(145deg,#b8563e,#a5462f);color:#fff;font-weight:800;font-size:15px;box-shadow:var(--shadow);transition:.15s}
+  .btn-del-big:hover{filter:brightness(1.08)}
+  .selbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:var(--gold-tint);border:1.5px solid var(--gold);border-radius:13px;padding:11px 16px;margin-bottom:14px;font-size:13.5px}
+  .selbar button:disabled{opacity:.45;cursor:not-allowed}
+  .selbox{display:inline-block;width:22px;font-size:15px;color:var(--gold-deep)}
+  tr.sel-on{background:var(--gold-tint) !important;box-shadow:inset 3px 0 0 var(--gold)}
+  #selBtn.on{border-color:var(--gold);background:var(--gold-tint);color:var(--gold-deep)}
+  .pdf-stage{position:fixed;left:-11000px;top:0;z-index:-1}
   .reason-tag{display:inline-flex;align-items:center;font-size:11px;font-weight:800;color:#8a3a20;background:#fbe4da;border:1px solid #e0a48d;border-radius:12px;padding:2px 10px;white-space:nowrap;vertical-align:middle}
   /* broker system */
   .head-btns{display:flex;gap:12px;flex-wrap:wrap}
@@ -494,6 +511,7 @@
           Filter <span class="f-badge" id="fBadge" style="display:none">0</span>
         </button>
         <button class="btn-filter" onclick="openPaper()">📰 Paper scan <span class="f-badge" id="pBadge" style="display:none">0</span></button>
+        <button class="btn-filter" id="selBtn" onclick="toggleSelMode()">☑ Select</button>
       </div>
       <div id="paperBanner"></div>
       <div class="filter-caption" id="filterCap"></div>
@@ -1303,6 +1321,95 @@
     calcC();
   }
 
+  /* ===== share as PDF + delete ===== */
+  function pdfKv(k,v){return `<tr><td style="padding:7px 12px;border-bottom:1px solid #ece4d3;color:#8d8474;font-size:12px;width:42%">${k}</td><td style="padding:7px 12px;border-bottom:1px solid #ece4d3;font-weight:700;font-size:12.5px;text-align:right">${v}</td></tr>`;}
+  function pdfSec(title,rows){return `<div style="margin-top:14px;border:1px solid #ddd2ba;border-radius:10px;overflow:hidden"><div style="background:#f6efdd;padding:8px 12px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#a5842a;text-transform:uppercase">${title}</div><table style="width:100%;border-collapse:collapse;background:#fff">${rows}</table></div>`;}
+  function pdfShell(title,sub,body){
+    return `<div style="font-family:Inter,Arial,sans-serif;color:#2a2620;width:730px;padding:26px 30px;background:#faf6ec">
+      <div style="display:flex;align-items:center;gap:12px;border-bottom:2.5px solid #bf9b30;padding-bottom:12px">
+        <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(145deg,#e4c97e,#a5842a);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:22px;color:#231b0e">L</div>
+        <div><div style="font-size:20px;font-weight:800">${title}</div><div style="font-size:12px;color:#8d8474">${sub}</div></div>
+      </div>${body}
+      <div style="margin-top:16px;font-size:10.5px;color:#8d8474;text-align:center">Generated from Land · ${new Date().toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit',hour12:true})}</div></div>`;
+  }
+  async function sharePdf(html,fname){
+    if(typeof html2pdf==='undefined'){alert('PDF engine still loading — try again in a moment.');return;}
+    const stage=document.createElement('div');stage.className='pdf-stage';stage.innerHTML=html;document.body.appendChild(stage);
+    try{
+      const blob=await html2pdf().set({margin:[8,8],image:{type:'jpeg',quality:.96},html2canvas:{scale:2,useCORS:true,backgroundColor:'#faf6ec'},jsPDF:{unit:'mm',format:'a4'}}).from(stage.firstElementChild).outputPdf('blob');
+      const file=new File([blob],fname,{type:'application/pdf'});
+      if(navigator.canShare&&navigator.canShare({files:[file]})){
+        try{await navigator.share({files:[file],title:fname.replace('.pdf','')});return;}
+        catch(e){if(e&&e.name==='AbortError')return;}
+      }
+      const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fname;a.click();
+    }catch(e){alert('Could not create PDF: '+e.message);}
+    finally{stage.remove();}
+  }
+  function pdfShareLand(i){
+    const l=lands[i];
+    const est=(l.sarea&&l.rate)?words((l.sarea*F[l.sunit])*(l.rate/F[l.runit.replace('per ','')])):'—';
+    const negV=(l.sarea&&l.nrate)?words((l.sarea*F[l.sunit])*(l.nrate/F[l.runit.replace('per ','')])):'';
+    let body='';
+    body+=pdfSec('Land details',
+      pdfKv('Land type',l.type||'—')+pdfKv('Survey number',l.survey||'—')+pdfKv('TP number',l.tp||'—')+pdfKv('FP number',l.fp||'—')+
+      pdfKv('Survey measurement',l.sarea?l.sarea.toLocaleString('en-IN')+' '+l.sunit:'—')+pdfKv('FP measurement',l.farea?l.farea.toLocaleString('en-IN')+' '+l.funit:'—')+
+      pdfKv('Location',l.loc||'—')+pdfKv('Date added',dAdded(l.added))+pdfKv('Saved by',l.addedBy||'—')+(l.addedAt?pdfKv('Saved at',dTime(l.addedAt)):''));
+    let rate=pdfKv('Asking rate',l.rate?fmt(l.rate)+' '+l.runit:'—')+pdfKv('Estimated value',est);
+    if(l.nrate)rate+=pdfKv('Negotiable rate',fmt(l.nrate)+' '+l.runit)+pdfKv('Value at negotiable',negV);
+    body+=pdfSec('Rate',rate);
+    const sc=paySchedule(l);
+    if(sc){let pr=pdfKv('Deal amount',words(sc.deal)+' ('+fmt(sc.deal)+')');
+      if(sc.token)pr+=pdfKv('Token'+(sc.tokdate?' · '+dAdded(sc.tokdate):''),fmt(sc.token));
+      if(sc.fpct)pr+=pdfKv('1st month — '+sc.fpct+'% of deal'+(sc.token?' − token':''),fmt(Math.round(sc.first)));
+      if(sc.pays)pr+=pdfKv(sc.pays+' payments '+intName[sc.interval]+' over '+sc.months+' months',fmt(Math.round(sc.per))+' / payment');
+      body+=pdfSec('Payment terms',pr);}
+    if(l.zone||l.fsitotal)body+=pdfSec('Zone & FSI',pdfKv('Zone',l.zone||'—')+pdfKv('FSI Free',l.fsifree||'—')+pdfKv('FSI Paid',l.fsipaid||'—')+pdfKv('Total FSI',l.fsitotal||'—'));
+    if(l.bname||l.bcode){const bb=l.bcode&&brokerByCode(l.bcode);
+      body+=pdfSec('Broker',(l.bcode?pdfKv('Code',l.bcode):'')+(bb&&bb.pet?pdfKv('Reference',bb.pet):'')+pdfKv('Name',l.bname||'—')+pdfKv('Mobile',l.bmob||'—')+(l.bemail?pdfKv('Email',l.bemail):'')+(l.bcomp?pdfKv('Company',l.bcomp):''));}
+    if(l.remark)body+=pdfSec('Remark',`<tr><td style="padding:10px 12px;font-size:12.5px;line-height:1.6">${l.remark}</td></tr>`);
+    const fname=((l.village||'Land')+(l.survey?'-Sur-'+l.survey:'')).replace(/[^\w-]+/g,'-')+'.pdf';
+    sharePdf(pdfShell(l.village||'Land',[l.type,l.district,l.state].filter(Boolean).join(' · '),body),fname);
+  }
+  function pdfShareCalc(i){
+    const c=savedCalcs[i],v=c.inputs||{};
+    const landLbl=c.landId?(()=>{const l=lands.find(x=>x._id===c.landId);return l?(l.village+' · Sur '+(l.survey||'—')):'';})():'';
+    let body='';
+    body+=pdfSec('Calculation',pdfKv('Name',c.name||'—')+(landLbl?pdfKv('Land',landLbl):'')+pdfKv('Saved',(c.at?dTime(c.at):dAdded(c.date)))+(c.by?pdfKv('Saved by',c.by):''));
+    let inp=pdfKv('Land area',(v.area||'—')+' sq yd')+pdfKv('Super built-up',(v.sbu||'—')+' %')+pdfKv('Free FSI',v.ffsi||'—')+pdfKv('Paid FSI',v.pfsi||'—');
+    if(v.others&&v.others.length)inp+=pdfKv('Other FSI',v.others.map(o=>o.type+' '+o.fsi).join(', '));
+    inp+=pdfKv('Land cost',v.landcost?'₹'+v.landcost:'—')+pdfKv('Construction rate',v.crate?'₹'+v.crate+' '+(v.cunit||''):'—')+pdfKv('Jantri rate',v.jantri?'₹'+v.jantri+' / sq m':'—')+pdfKv('Paid FSI %',(v.ppct||'—')+' %')+pdfKv('Other FSI %',(v.opct||'—')+' %');
+    body+=pdfSec('Inputs',inp);
+    if(v.flats&&v.flats.length)body+=pdfSec('Flat mix',v.flats.map(fl=>pdfKv(fl.type||fl.base,(fl.count===null||fl.count===''?'auto':fl.count+' flats')+' × '+(fl.area||0)+' '+(fl.unit||'sq yd'))).join(''));
+    body+=pdfSec('Result',pdfKv('Total project cost',words(Math.round(c.grand||0)))+(c.per?pdfKv('Per sellable sq yd',fmt(c.per)):''));
+    const fname=(c.name||'Calculation').replace(/[^\w-]+/g,'-')+'.pdf';
+    sharePdf(pdfShell(c.name||'Calculation','Construction cost calculation'+(landLbl?' · '+landLbl:''),body),fname);
+  }
+  async function delLand(i){
+    const l=lands[i];
+    if(!confirm('Delete this entry of '+(l.village||'this land')+' ('+dShort(l.added)+(l.bname?' · '+l.bname:'')+')?\nThis cannot be undone.'))return;
+    if(l._id){const {error}=await sb.from('lands').delete().eq('id',l._id);if(error){alert('Could not delete: '+error.message);return;}}
+    lands.splice(i,1);paperHits={};const b=document.getElementById('pBadge');if(b)b.style.display='none';
+    goDash();
+  }
+
+  /* multi-select delete on dashboard */
+  let selMode=false, selGroups=new Set();
+  function toggleSelMode(){selMode=!selMode;selGroups.clear();const bt=document.getElementById('selBtn');if(bt)bt.classList.toggle('on',selMode);render();}
+  function toggleSelG(k){selGroups.has(k)?selGroups.delete(k):selGroups.add(k);render();}
+  async function delSelected(){
+    const victims=lands.filter(l=>selGroups.has(groupKey(l)));
+    if(!victims.length)return;
+    if(!confirm('Delete '+victims.length+' entr'+(victims.length>1?'ies':'y')+' across '+selGroups.size+' land'+(selGroups.size>1?'s':'')+'?\nThis cannot be undone.'))return;
+    const ids=victims.map(l=>l._id).filter(Boolean);
+    if(ids.length){const {error}=await sb.from('lands').delete().in('id',ids);if(error){alert('Could not delete: '+error.message);return;}}
+    lands=lands.filter(l=>!selGroups.has(groupKey(l)));
+    selMode=false;selGroups.clear();paperHits={};
+    const bt=document.getElementById('selBtn');if(bt)bt.classList.remove('on');
+    const b=document.getElementById('pBadge');if(b)b.style.display='none';
+    render();
+  }
+
   /* ===== newspaper notice scan ===== */
   let paperHits={};   // landIdx -> {on:[terms], reason:[], names:[], contact, snippet}
   function openPaper(){cEl('paperScrim').classList.add('show');cEl('paperModal').classList.add('show');}
@@ -1408,7 +1515,7 @@
       ? savedCalcs.map((c,i)=>`<div class="saved-row">
           <div><div class="sr-t">${c.name}</div><div class="sr-s">${c.at?dTime(c.at):dAdded(c.date)}${c.by?' · by '+c.by:''}${c.per?' · '+fmt(c.per)+' / sellable sq yd':''}</div></div>
           <div class="sr-v">${words(Math.round(c.grand))}</div>
-          <div class="sr-btns"><button class="sr-btn" onclick="loadCalc(${i})">Load</button><button class="sr-btn del" onclick="delCalc(${i})">Delete</button></div>
+          <div class="sr-btns"><button class="sr-btn" onclick="pdfShareCalc(${i})">📤 Share</button><button class="sr-btn" onclick="loadCalc(${i})">Load</button><button class="sr-btn del" onclick="delCalc(${i})">Delete</button></div>
         </div>`).join('')
       : '<div class="import-note" style="margin-top:0">No calculations saved yet — run a calculation and tap “Save calculation”.</div>';
   }
@@ -1601,16 +1708,19 @@
     const banner=document.getElementById('paperBanner');
     if(banner){
       const hitIdx=Object.keys(paperHits);
-      banner.innerHTML = hitIdx.length
+      const selBar=selMode?`<div class="selbar"><div><b>${selGroups.size}</b> land${selGroups.size===1?'':'s'} selected — tap rows to select</div><div style="display:flex;gap:10px"><button class="sr-btn del" onclick="delSelected()" ${selGroups.size?'':'disabled'}>🗑 Delete selected</button><button class="sr-btn" onclick="toggleSelMode()">Cancel</button></div></div>`:'';
+      banner.innerHTML = selBar + (hitIdx.length
         ? `<div class="paper-banner"><div><b>📰 In today's paper:</b> ${hitIdx.map(i=>`<span class="pb-land" onclick="detail(${i})">${lands[i].village||'—'}</span> <span class="reason-tag">${(paperHits[i].reason||[])[0]||'Notice'}</span> <span style="color:var(--muted)">(${paperHits[i].on.join(', ')})</span>`).join(' · ')}</div><span class="clear-f" onclick="clearPaper()">✕ dismiss</span></div>`
-        : '';
+        : '');
     }
     const rowsHtml=groupArr.map(entries=>{
       entries.sort((a,b)=>(b.l.added||'').localeCompare(a.l.added||''));
       const {l,i}=entries[0], n=entries.length;
       const hit=entries.find(e=>paperHits[e.i]);
-      return `<tr onclick="detail(${i})"${hit?' class="paper-hit"':''}>
-      <td><div class="loc-name">${l.village||'—'}${hit?' <span class="entry-badge" style="border-color:var(--red);color:var(--red);background:#fdf0ec">📰 in today\u2019s paper</span>':''}${n>1?` <span class="entry-badge">${n} entries</span>`:''}</div><div class="loc-sub">${[l.survey?'Sur '+l.survey:'',l.district].filter(Boolean).join(' · ')}</div></td>
+      const k=groupKey(l), kEsc=k.replace(/'/g,"\\'");
+      const selOn=selMode&&selGroups.has(k);
+      return `<tr onclick="${selMode?`toggleSelG('${kEsc}')`:`detail(${i})`}" class="${hit?'paper-hit ':''}${selOn?'sel-on':''}">
+      <td><div class="loc-name">${selMode?`<span class="selbox">${selOn?'☑':'☐'}</span>`:''}${l.village||'—'}${hit?' <span class="entry-badge" style="border-color:var(--red);color:var(--red);background:#fdf0ec">📰 in today\u2019s paper</span>':''}${n>1?` <span class="entry-badge">${n} entries</span>`:''}</div><div class="loc-sub">${[l.survey?'Sur '+l.survey:'',l.district].filter(Boolean).join(' · ')}</div></td>
       <td><span class="type-tag">${l.type.split(' ')[0]}</span></td>
       <td class="mono hide-sm">${l.sarea?l.sarea.toLocaleString('en-IN')+' '+l.sunit:'—'}</td>
       <td class="mono">${l.rate?fmt(l.rate):'—'}</td>
@@ -1870,7 +1980,7 @@
       <a class="back-link" onclick="goDash()"><span class="ba">←</span> Back to lands</a>
       <div class="detail-head">
         <div><h2>${l.village||'Untitled land'}</h2><div class="sub">${[l.type,l.district,l.state].filter(Boolean).join(' · ')}</div></div>
-        <button class="btn-ghost" onclick="editLand(${i})">Edit</button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn-ghost" onclick="pdfShareLand(${i})">📤 Share PDF</button><button class="btn-ghost" onclick="editLand(${i})">Edit</button></div>
       </div>
       ${tabs}
       <div class="detail-grid">
@@ -1911,7 +2021,9 @@
             ${(l.bcode&&brokerByCode(l.bcode))?typeRows(brokerByCode(l.bcode)):''}
           </div>
         </div>
-      </div>`;
+      </div>
+      <button class="btn-del-big" onclick="delLand(${i})">🗑 Delete this entry${grp.length>1?' — only the '+dShort(l.added)+' snapshot':''}</button>
+      ${grp.length>1?'<div class="import-note" style="text-align:center;margin-top:8px">This land has '+grp.length+' entries — deleting removes only the one you are viewing.</div>':''}`;
     show('v-detail');
   }
   function openMapsFor(v){
