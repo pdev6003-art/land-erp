@@ -311,11 +311,18 @@
   .br-edit-btn{align-self:center;white-space:nowrap;padding:9px 16px;border-radius:10px;border:1px solid var(--line-strong);background:#fff;color:var(--gold-deep);font-weight:700;font-size:13px;transition:.12s}
   .br-edit-btn:hover{background:var(--gold-tint);border-color:var(--gold);transform:translateX(2px)}
   /* visiting-card scan */
-  .card-scan{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:-4px 0 14px}
-  .bscan-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:10px;border:1px solid var(--line-strong);background:#fff;color:var(--gold-deep);font-weight:700;font-size:13px;transition:.12s}
-  .bscan-btn:hover{background:var(--gold-tint);border-color:var(--gold);transform:translateY(-1px)}
-  .bscan-btn:disabled{opacity:.55;cursor:default;transform:none}
-  .bscan-status{font-size:12.5px;color:var(--muted);font-weight:600}
+  .card-scan{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    margin:0 0 18px;padding:16px 18px;border-radius:13px;
+    background:linear-gradient(135deg,var(--gold-tint),#fffdf6);
+    border:2px dashed var(--gold);}
+  .bscan-btn{display:inline-flex;align-items:center;gap:9px;padding:15px 26px;border-radius:12px;
+    border:none;background:linear-gradient(145deg,var(--gold-soft),var(--gold-deep));
+    color:#231b0e;font-weight:800;font-size:16px;letter-spacing:.2px;
+    box-shadow:0 3px 10px rgba(165,132,42,.32);transition:.15s;white-space:nowrap}
+  .bscan-btn:hover{filter:brightness(1.05);box-shadow:0 5px 16px rgba(165,132,42,.42);transform:translateY(-1px)}
+  .bscan-btn:disabled{opacity:.55;cursor:default;transform:none;filter:none}
+  .bscan-btn .bs-ico{font-size:20px;line-height:1}
+  .bscan-status{font-size:13px;color:var(--muted);font-weight:600;flex:1;min-width:180px}
   .bscan-status.ok{color:#2f6b45}
   .bscan-status.err{color:#a5462f}
   /* working-area autocomplete */
@@ -779,7 +786,7 @@
         <div class="form-sec">
           <div class="sec-title"><span class="dot">🪪</span> Broker identity <span class="idx">01</span></div>
           <div class="card-scan">
-            <button type="button" class="bscan-btn" id="b_cardBtn" onclick="cardPick()">📇 Scan visiting card</button>
+            <button type="button" class="bscan-btn" id="b_cardBtn" onclick="cardPick()"><span class="bs-ico">📇</span> Scan visiting card</button>
             <input type="file" id="b_cardFiles" accept="image/*" multiple hidden onchange="cardScan(this.files)">
             <span class="bscan-status" id="b_cardStatus">Pick the front and back — the details fill in below for you to check.</span>
           </div>
