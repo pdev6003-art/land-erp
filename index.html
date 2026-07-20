@@ -310,6 +310,14 @@
   .btn-broker-view:hover{background:var(--gold-tint);border-color:var(--gold);transform:translateY(-1px)}
   .br-edit-btn{align-self:center;white-space:nowrap;padding:9px 16px;border-radius:10px;border:1px solid var(--line-strong);background:#fff;color:var(--gold-deep);font-weight:700;font-size:13px;transition:.12s}
   .br-edit-btn:hover{background:var(--gold-tint);border-color:var(--gold);transform:translateX(2px)}
+  /* visiting-card scan */
+  .card-scan{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:-4px 0 14px}
+  .bscan-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:10px;border:1px solid var(--line-strong);background:#fff;color:var(--gold-deep);font-weight:700;font-size:13px;transition:.12s}
+  .bscan-btn:hover{background:var(--gold-tint);border-color:var(--gold);transform:translateY(-1px)}
+  .bscan-btn:disabled{opacity:.55;cursor:default;transform:none}
+  .bscan-status{font-size:12.5px;color:var(--muted);font-weight:600}
+  .bscan-status.ok{color:#2f6b45}
+  .bscan-status.err{color:#a5462f}
   /* working-area autocomplete */
   .area-pick{display:flex;flex-direction:column;gap:8px}
   .area-chips{display:flex;flex-wrap:wrap;gap:7px}
@@ -770,6 +778,11 @@
       <div class="form-card" style="margin-bottom:18px">
         <div class="form-sec">
           <div class="sec-title"><span class="dot">🪪</span> Broker identity <span class="idx">01</span></div>
+          <div class="card-scan">
+            <button type="button" class="bscan-btn" id="b_cardBtn" onclick="cardPick()">📇 Scan visiting card</button>
+            <input type="file" id="b_cardFiles" accept="image/*" multiple hidden onchange="cardScan(this.files)">
+            <span class="bscan-status" id="b_cardStatus">Pick the front and back — the details fill in below for you to check.</span>
+          </div>
           <div class="grid g2">
             <div class="field"><label>Broker code <span class="opt">(auto — you can change it)</span></label><input id="b_code" placeholder="#0001"></div>
             <div class="field"><label>Pet / reference name <span class="opt">(how you remember them)</span></label><input id="b_pet" placeholder="e.g. Shela vada Kiran"></div>
@@ -1174,6 +1187,71 @@
       '</span></div>').join('');
   }
 
+  /* ===== visiting-card scan (fills the broker form, never saves) ===== */
+  const CARD_MAX_EDGE=1568;   // Claude's best-value image size — bigger just costs more
+  const CARD_MAX_FILES=4;
+
+  function cardStatus(msg,kind){
+    const el=document.getElementById('b_cardStatus');
+    el.className='bscan-status'+(kind?' '+kind:'');
+    el.textContent=msg;
+  }
+  function cardPick(){const f=document.getElementById('b_cardFiles');f.value='';f.click();}
+
+  /* Shrink before upload: keeps us inside the request size limit and cuts cost. */
+  function cardShrink(file){
+    return new Promise((resolve,reject)=>{
+      const url=URL.createObjectURL(file);
+      const img=new Image();
+      img.onload=()=>{
+        URL.revokeObjectURL(url);
+        let {width:w,height:h}=img;
+        const scale=Math.min(1,CARD_MAX_EDGE/Math.max(w,h));
+        w=Math.round(w*scale);h=Math.round(h*scale);
+        const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+        cv.getContext('2d').drawImage(img,0,0,w,h);
+        const durl=cv.toDataURL('image/jpeg',0.8);
+        resolve({media_type:'image/jpeg',data:durl.slice(durl.indexOf(',')+1)});
+      };
+      img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('That file could not be opened as an image.'));};
+      img.src=url;
+    });
+  }
+
+  async function cardScan(files){
+    const list=Array.from(files||[]);
+    if(!list.length)return;
+    const btn=document.getElementById('b_cardBtn');
+    if(list.length>CARD_MAX_FILES){cardStatus('Please pick at most '+CARD_MAX_FILES+' photos.','err');return;}
+    btn.disabled=true;
+    cardStatus('Reading card…');
+    try{
+      const images=await Promise.all(list.map(cardShrink));
+      const res=await fetch('/api/scan',{
+        method:'POST',
+        headers:{'content-type':'application/json'},
+        body:JSON.stringify({images})
+      });
+      let out={};
+      try{out=await res.json();}catch(e){}
+      if(!res.ok)throw new Error(out.error||'Scan failed.');
+
+      const map={name:'b_name',mobile:'b_mob',email:'b_email',company:'b_comp',address:'b_addr'};
+      const filled=[];
+      Object.keys(map).forEach(k=>{
+        const v=(out[k]||'').trim();
+        if(v){bEl(map[k]).value=v;filled.push(k==='company'?'company':k);}
+      });
+
+      if(!filled.length){cardStatus('No details found on that photo — try a clearer, straighter shot.','err');}
+      else{cardStatus('Filled '+filled.join(', ')+'. Check the fields, then Save broker.','ok');}
+    }catch(err){
+      cardStatus(err.message||'Scan failed. Please try again.','err');
+    }finally{
+      btn.disabled=false;
+    }
+  }
+
   /* ===== broker form & picker ===== */
   let brokerEdit=-1, selBroker=null; window._fromLand=false;
   const bEl=id=>document.getElementById(id);
@@ -1181,6 +1259,7 @@
   function nextBrokerCode(){let mx=0;brokers.forEach(b=>{const n=+String(b.code).replace(/\D/g,'');if(n>mx)mx=n;});return '#'+String(mx+1).padStart(4,'0');}
   function goBroker(fromLand){window._fromLand=!!fromLand;brokerEdit=-1;
     ['b_code','b_pet','b_name','b_mob','b_email','b_comp','b_addr','b_area'].forEach(k=>bEl(k).value='');
+    cardStatus('Pick the front and back — the details fill in below for you to check.');
     areaSel=[];renderAreaChips();
     bEl('b_code').value=nextBrokerCode();bTypesSel={};renderBTypes();
     document.getElementById('brokerTitle').textContent='Add a New Broker';
