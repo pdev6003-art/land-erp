@@ -306,6 +306,27 @@
   .reason-tag{display:inline-flex;align-items:center;font-size:11px;font-weight:800;color:#8a3a20;background:#fbe4da;border:1px solid #e0a48d;border-radius:12px;padding:2px 10px;white-space:nowrap;vertical-align:middle}
   /* broker system */
   .head-btns{display:flex;gap:12px;flex-wrap:wrap}
+  .btn-broker-view{background:#fff;color:var(--text);font-weight:700;padding:14px 22px;border-radius:13px;border:1px solid var(--line-strong);font-size:15.5px;display:inline-flex;align-items:center;gap:7px;box-shadow:var(--shadow);transition:.15s}
+  .btn-broker-view:hover{background:var(--gold-tint);border-color:var(--gold);transform:translateY(-1px)}
+  .br-edit-btn{align-self:center;white-space:nowrap;padding:9px 16px;border-radius:10px;border:1px solid var(--line-strong);background:#fff;color:var(--gold-deep);font-weight:700;font-size:13px;transition:.12s}
+  .br-edit-btn:hover{background:var(--gold-tint);border-color:var(--gold);transform:translateX(2px)}
+  /* working-area autocomplete */
+  .area-pick{display:flex;flex-direction:column;gap:8px}
+  .area-chips{display:flex;flex-wrap:wrap;gap:7px}
+  .area-chips:empty{display:none}
+  .area-chip{display:inline-flex;align-items:center;gap:7px;background:var(--gold-tint);border:1px solid var(--line-strong);border-radius:16px;padding:6px 8px 6px 13px;font-size:13px;font-weight:600;color:var(--text)}
+  .area-chip b{cursor:pointer;font-size:16px;line-height:1;color:var(--muted);font-weight:700}
+  .area-chip b:hover{color:var(--red)}
+  .area-inwrap{position:relative}
+  .area-inwrap input{width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--line-strong);background:#fdfbf6;outline:none;color:var(--text)}
+  .area-inwrap input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(191,155,48,.15);background:#fff}
+  .area-drop{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--card);border:1px solid var(--line-strong);border-radius:12px;box-shadow:0 12px 32px rgba(28,23,16,.16);max-height:260px;overflow-y:auto;z-index:24}
+  .area-drop.show{display:block}
+  .area-opt{padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer;font-size:14px}
+  .area-opt:last-child{border-bottom:none}
+  .area-opt:hover{background:var(--gold-tint)}
+  .area-new{color:var(--gold-deep);font-weight:700;background:#fdfbf6}
+  .area-empty{padding:12px 14px;color:var(--muted);font-size:13px;text-align:center}
   .btn-primary.big,.btn-broker.big{padding:14px 24px;font-size:15.5px;border-radius:13px;font-weight:800}
   .btn-broker{background:linear-gradient(145deg,#6f9c58,#4f7a3a);color:#fff;font-weight:700;padding:11px 18px;border-radius:11px;font-size:14px;display:inline-flex;align-items:center;gap:7px;box-shadow:var(--shadow);transition:.15s}
   .btn-broker:hover{filter:brightness(1.06);transform:translateY(-1px)}
@@ -490,6 +511,7 @@
       <div class="page-head">
         <div><h2>Stored Lands</h2><p>Every plot a broker brings you — kept in one place.</p></div>
         <div class="head-btns">
+          <button class="btn-broker-view" onclick="goBrokerList()">👥 View Brokers</button>
           <button class="btn-broker big" onclick="goBroker()">＋ Add New Broker</button>
           <button class="btn-primary big" onclick="goAdd()">＋ Add New Land</button>
         </div>
@@ -716,9 +738,9 @@
         <div class="form-sec">
           <div class="sec-title"><span class="dot">👤</span> Broker detail <span class="idx">04</span></div>
           <div class="field full">
-            <label>Broker <span class="opt">— type a name or code (#001), or add a new one</span></label>
+            <label>Broker <span class="opt">— type a name or code (#0001), or add a new one</span></label>
             <div class="broker-pick">
-              <input id="f_bsearch" placeholder="e.g. Kiran, #001, Shela vada…" oninput="bDrop()" onfocus="bDrop()" autocomplete="off">
+              <input id="f_bsearch" placeholder="e.g. Kiran, #0001, Shela vada…" oninput="bDrop()" onfocus="bDrop()" autocomplete="off">
               <div class="broker-drop" id="bDropList"></div>
             </div>
             <div class="broker-sel" id="bSelCard"></div>
@@ -749,7 +771,7 @@
         <div class="form-sec">
           <div class="sec-title"><span class="dot">🪪</span> Broker identity <span class="idx">01</span></div>
           <div class="grid g2">
-            <div class="field"><label>Broker code <span class="opt">(auto — you can change it)</span></label><input id="b_code" placeholder="#001"></div>
+            <div class="field"><label>Broker code <span class="opt">(auto — you can change it)</span></label><input id="b_code" placeholder="#0001"></div>
             <div class="field"><label>Pet / reference name <span class="opt">(how you remember them)</span></label><input id="b_pet" placeholder="e.g. Shela vada Kiran"></div>
             <div class="field"><label>Broker name</label><input id="b_name" placeholder="e.g. Kiran Patel"></div>
             <div class="field"><label>Mobile</label><input id="b_mob" placeholder="e.g. 98250 11223"></div>
@@ -761,7 +783,15 @@
             <div class="field"><label>Email <span class="opt">(optional)</span></label><input id="b_email" placeholder="e.g. kiran@estate.com"></div>
             <div class="field"><label>Company name <span class="opt">(optional)</span></label><input id="b_comp" placeholder="e.g. Patel Estates"></div>
             <div class="field full"><label>Address <span class="opt">(optional)</span></label><input id="b_addr" placeholder="e.g. A/202, Business Hub, Gota, Ahmedabad"></div>
-            <div class="field full"><label>Working area <span class="opt">(villages / zones this broker covers)</span></label><input id="b_area" placeholder="e.g. Shela, Bopal, Godhavi belt"></div>
+            <div class="field full"><label>Working area <span class="opt">(type to search villages — tap to add, or type a new one)</span></label>
+              <div class="area-pick">
+                <div class="area-chips" id="areaChips"></div>
+                <div class="area-inwrap">
+                  <input id="b_area" placeholder="Type a village… e.g. va → Vamaj, Vadasar" oninput="areaFilter()" onfocus="areaFilter()" onkeydown="areaKey(event)" autocomplete="off">
+                  <div class="area-drop" id="areaDrop"></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="form-sec">
@@ -774,9 +804,17 @@
           <button class="btn-broker" onclick="saveBroker()">Save broker</button>
         </div>
       </div>
+    </div>
+
+    <!-- VIEW BROKERS -->
+    <div class="view" id="v-brokerlist">
+      <a class="back-link" onclick="goDash()"><span class="ba">←</span> Back</a>
+      <div class="page-head">
+        <div><h2>All Brokers</h2><p>Everyone you\'ve saved — tap a card to edit their details.</p></div>
+        <button class="btn-broker big" onclick="goBroker()">＋ Add New Broker</button>
+      </div>
       <div class="form-card">
         <div class="form-sec" style="border-bottom:none">
-          <div class="sec-title"><span class="dot">👥</span> Saved brokers <span class="opt" style="text-transform:none;letter-spacing:0">(tap to edit)</span></div>
           <div id="brokerList"></div>
         </div>
       </div>
@@ -967,6 +1005,45 @@
   const SB_KEY='sb_publishable_N1TJ0-StSUcHFJf2gFJe-Q_XS_0EJSg';
   const sb=supabase.createClient(SB_URL,SB_KEY);
 
+  /* ===== working-area autocomplete (seeded village list, grows over time) ===== */
+  let AREAS=["Ambali", "Anadej", "Beelu", "Bhadaj", "Bharanpur", "Bhimsan", "Bopal", "Chamdrasan", "Chandlodiya", "Chatlodia", "Chekhla", "Chenpur", "Chharodi", "Dantali", "Daran", "Doder", "Fuletra", "Ghoda", "Gokulpura", "Govindpura", "Jagatpur", "Jaspur", "Jethalaj", "Karoli", "Khadraj", "Khanderavpura", "Khavad", "Kolad", "Kongari", "Lakshmanpura", "Lapkaman", "Lilapur", "Medha", "Memnagar", "Nadan", "Namdoli", "Nasmed", "Ognaj", "Panchod Pura", "Rakampur", "Rampura", "Ranip", "Rastrapur", "Sanavad", "Santej", "Sedfa", "Shilaj", "Sola", "Thaltej", "Thol", "Tragad", "Vadasar", "Vadavli", "Vadgam", "Vamaj", "Vyana", "Yekra", "Zundal"];
+  let areaSel=[];   // chosen villages for the broker currently being edited
+  function areaSort(){AREAS.sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()));}
+  function loadAreas(){try{const saved=JSON.parse(localStorage.getItem('landAreas')||'null');if(saved&&saved.length){const set=new Set(AREAS.map(a=>a.toLowerCase()));saved.forEach(a=>{if(!set.has(a.toLowerCase()))AREAS.push(a);});areaSort();}}catch(e){}}
+  function saveAreas(){try{localStorage.setItem('landAreas',JSON.stringify(AREAS));}catch(e){}}
+  function renderAreaChips(){
+    const box=document.getElementById('areaChips');if(!box)return;
+    box.innerHTML=areaSel.map((a,i)=>`<span class="area-chip">${a}<b onclick="areaRemove(${i})">×</b></span>`).join('');
+  }
+  function areaRemove(i){areaSel.splice(i,1);renderAreaChips();areaFilter();}
+  function areaAdd(name){
+    name=name.trim();if(!name)return;
+    if(!areaSel.some(a=>a.toLowerCase()===name.toLowerCase()))areaSel.push(name);
+    if(!AREAS.some(a=>a.toLowerCase()===name.toLowerCase())){AREAS.push(name);areaSort();saveAreas();}
+    const inp=document.getElementById('b_area');if(inp)inp.value='';
+    renderAreaChips();areaFilter();
+  }
+  function areaFilter(){
+    const inp=document.getElementById('b_area'),drop=document.getElementById('areaDrop');if(!inp||!drop)return;
+    const q=inp.value.trim().toLowerCase();
+    const chosen=new Set(areaSel.map(a=>a.toLowerCase()));
+    let matches=AREAS.filter(a=>!chosen.has(a.toLowerCase())&&(!q||a.toLowerCase().includes(q)));
+    // rank: names STARTING with the query first, then contains
+    if(q)matches.sort((a,b)=>{const sa=a.toLowerCase().startsWith(q)?0:1,sb=b.toLowerCase().startsWith(q)?0:1;return sa-sb||a.toLowerCase().localeCompare(b.toLowerCase());});
+    let html='';
+    if(matches.length)html+=matches.slice(0,60).map(a=>`<div class="area-opt" onclick="areaAdd('${a.replace(/'/g,"\\'")}')">${a}</div>`).join('');
+    const exact=AREAS.some(a=>a.toLowerCase()===q);
+    if(q&&!exact)html=`<div class="area-opt area-new" onclick="areaAdd('${inp.value.trim().replace(/'/g,"\\'")}')">➕ Add “${inp.value.trim()}” as a new area</div>`+html;
+    if(!html)html='<div class="area-empty">No matches — keep typing to add it as new</div>';
+    drop.innerHTML=html;drop.classList.add('show');
+  }
+  function areaKey(e){
+    if(e.key==='Enter'){e.preventDefault();const v=e.target.value.trim();if(v){const m=AREAS.find(a=>a.toLowerCase()===v.toLowerCase());areaAdd(m||v);}}
+    if(e.key==='Escape'){document.getElementById('areaDrop').classList.remove('show');}
+  }
+  document.addEventListener('click',e=>{const w=e.target.closest('.area-inwrap');const d=document.getElementById('areaDrop');if(d&&!w)d.classList.remove('show');});
+  loadAreas();
+
   const fmt = n => n ? '₹' + Number(n).toLocaleString('en-IN') : '—';
   function words(n){n=Number(n)||0;if(!n)return '—';
     if(n>=1e7)return '₹'+(n/1e7).toFixed(2).replace(/\.00$/,'')+' Cr';
@@ -1101,9 +1178,10 @@
   let brokerEdit=-1, selBroker=null; window._fromLand=false;
   const bEl=id=>document.getElementById(id);
   const brokerByCode=c=>brokers.find(b=>b.code===c);
-  function nextBrokerCode(){let mx=0;brokers.forEach(b=>{const n=+String(b.code).replace(/\D/g,'');if(n>mx)mx=n;});return '#'+String(mx+1).padStart(3,'0');}
+  function nextBrokerCode(){let mx=0;brokers.forEach(b=>{const n=+String(b.code).replace(/\D/g,'');if(n>mx)mx=n;});return '#'+String(mx+1).padStart(4,'0');}
   function goBroker(fromLand){window._fromLand=!!fromLand;brokerEdit=-1;
     ['b_code','b_pet','b_name','b_mob','b_email','b_comp','b_addr','b_area'].forEach(k=>bEl(k).value='');
+    areaSel=[];renderAreaChips();
     bEl('b_code').value=nextBrokerCode();bTypesSel={};renderBTypes();
     document.getElementById('brokerTitle').textContent='Add a New Broker';
     renderBrokerList();show('v-broker');setTab('land');}
@@ -1116,7 +1194,8 @@
     const dup=brokers.findIndex(b=>b.code===code);
     if(dup>=0&&dup!==brokerEdit){alert('Code '+code+' is already used by '+brokers[dup].name+'. Pick another code.');return;}
     const types={};Object.entries(bTypesSel).forEach(([c,st])=>{if(st.size)types[c]=[...st];});
-    const obj={code,pet:g('b_pet'),name:g('b_name'),mob:g('b_mob'),email:g('b_email'),comp:g('b_comp'),addr:g('b_addr'),area:g('b_area'),types};
+    const leftover=g('b_area');if(leftover){const m=AREAS.find(a=>a.toLowerCase()===leftover.toLowerCase());areaAdd(m||leftover);}
+    const obj={code,pet:g('b_pet'),name:g('b_name'),mob:g('b_mob'),email:g('b_email'),comp:g('b_comp'),addr:g('b_addr'),area:areaSel.join(', '),areaList:areaSel.slice(),types};
     try{
       if(brokerEdit>=0){
         const id=brokers[brokerEdit]._id;obj._id=id;
@@ -1129,19 +1208,22 @@
       }
     }catch(e){alert('Could not save broker to cloud: '+e.message);return;}
     if(window._fromLand){pickBroker(obj.code);show('v-add');}
-    else{renderBrokerList();goBroker();document.getElementById('brokerTitle').textContent='Add a New Broker';}
+    else{renderBrokerList();goBrokerList();}
   }
+  function goBrokerList(){renderBrokerList();show('v-brokerlist');setTab('land');}
   function renderBrokerList(){
     const box=document.getElementById('brokerList');if(!box)return;
-    box.innerHTML=brokers.length?brokers.map((b,i)=>`<div class="broker-row" onclick="editBroker(${i})">
+    box.innerHTML=brokers.length?brokers.map((b,i)=>`<div class="broker-row">
       <div><span class="bcode-tag">${b.code}</span> <b class="br-n" style="margin-left:6px">${b.name}</b>${b.pet?' <span class="il-sub">· '+b.pet+'</span>':''}
       <div class="il-sub">${[b.mob,b.comp,b.area].filter(Boolean).join(' · ')||'—'}</div>${b.types&&Object.keys(b.types).length?'<div style="margin-top:5px">'+typeBadges(b,4)+'</div>':''}</div>
-      <div class="il-sub">edit →</div></div>`).join(''):'<div class="import-note" style="margin-top:0">No brokers saved yet.</div>';
+      <button class="br-edit-btn" onclick="event.stopPropagation();editBroker(${i})">✏️ Edit</button></div>`).join(''):'<div class="import-note" style="margin-top:0">No brokers saved yet. Tap “Add New Broker” to create one.</div>';
   }
   function editBroker(i){
-    brokerEdit=i;const b=brokers[i];
+    brokerEdit=i;const b=brokers[i];show('v-broker');
     bEl('b_code').value=b.code;bEl('b_pet').value=b.pet;bEl('b_name').value=b.name;bEl('b_mob').value=b.mob;
-    bEl('b_email').value=b.email;bEl('b_comp').value=b.comp;bEl('b_addr').value=b.addr;bEl('b_area').value=b.area;
+    bEl('b_email').value=b.email;bEl('b_comp').value=b.comp;bEl('b_addr').value=b.addr;bEl('b_area').value='';
+    areaSel=(b.areaList&&b.areaList.length)?b.areaList.slice():(b.area?b.area.split(',').map(x=>x.trim()).filter(Boolean):[]);
+    areaSel.forEach(a=>{if(!AREAS.some(x=>x.toLowerCase()===a.toLowerCase()))AREAS.push(a);});areaSort();renderAreaChips();
     bTypesSel={};Object.entries(b.types||{}).forEach(([c,arr])=>bTypesSel[c]=new Set(arr));renderBTypes();
     document.getElementById('brokerTitle').textContent='Edit Broker '+b.code;window.scrollTo({top:0,behavior:'smooth'});
   }
