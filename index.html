@@ -325,6 +325,33 @@
   .bscan-status{font-size:13px;color:var(--muted);font-weight:600;flex:1;min-width:180px}
   .bscan-status.ok{color:#2f6b45}
   .bscan-status.err{color:#a5462f}
+  /* broker list — call button */
+  .br-actions{display:flex;align-items:center;gap:8px;align-self:center;flex-shrink:0}
+  .br-call-btn{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;padding:9px 16px;border-radius:10px;
+    border:1px solid #bcd8c6;background:#eef7f1;color:#2f6b45;font-weight:700;font-size:13px;text-decoration:none;transition:.12s}
+  .br-call-btn:hover{background:#dcefe4;border-color:#2f6b45;transform:translateY(-1px)}
+  /* broker list — filters */
+  .bflt-card{margin-bottom:14px}
+  .bflt-head{display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;user-select:none}
+  .bflt-title{font-weight:800;font-size:14px;display:inline-flex;align-items:center;gap:7px}
+  .bflt-badge{font-size:11px;font-weight:800;color:#231b0e;background:var(--gold-soft);border-radius:10px;padding:2px 8px}
+  .bflt-count{margin-left:auto;font-size:12.5px;color:var(--muted);font-weight:600}
+  .bflt-arrow{font-size:11px;color:var(--muted);transition:.2s}
+  .bflt-card.open .bflt-arrow{transform:rotate(180deg)}
+  .bflt-body{display:none;padding:2px 16px 16px;border-top:1px solid var(--line)}
+  .bflt-card.open .bflt-body{display:block}
+  .bflt-lab{font-size:12px;font-weight:700;color:var(--muted);margin:13px 0 7px}
+  .bflt-chips{display:flex;flex-wrap:wrap;gap:7px}
+  .fchip{font-size:12.5px;font-weight:700;padding:7px 13px;border-radius:20px;border:1px solid var(--line-strong);
+    background:#fff;color:var(--text);cursor:pointer;transition:.12s;font-family:inherit}
+  .fchip:hover{border-color:var(--gold)}
+  .fchip.on{background:var(--gold-tint);border-color:var(--gold);color:var(--gold-deep)}
+  .fchip.m-buy.on{background:#eef7f1;border-color:#2f6b45;color:#2f6b45}
+  .fchip.m-sell.on{background:#fdeeea;border-color:#a5462f;color:#a5462f}
+  .fchip.m-lease.on{background:#eef2f7;border-color:#3a6079;color:#3a6079}
+  .bflt-clear{font-size:12px;font-weight:700;color:var(--muted);background:none;border:none;
+    text-decoration:underline;cursor:pointer;padding:4px;font-family:inherit}
+  .bflt-hint{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.4}
   /* working-area autocomplete */
   .area-pick{display:flex;flex-direction:column;gap:8px}
   .area-chips{display:flex;flex-wrap:wrap;gap:7px}
@@ -833,6 +860,29 @@
         <div><h2>All Brokers</h2><p>Everyone you\'ve saved — tap a card to edit their details.</p></div>
         <button class="btn-broker big" onclick="goBroker()">＋ Add New Broker</button>
       </div>
+      <div class="form-card bflt-card" id="bfltCard">
+        <div class="bflt-head" onclick="bfltToggle()">
+          <span class="bflt-title">🔎 Filter brokers <span class="bflt-badge" id="bfltBadge" style="display:none">0</span></span>
+          <span class="bflt-count" id="bfltCount"></span>
+          <span class="bflt-arrow">▼</span>
+        </div>
+        <div class="bflt-body">
+          <div class="bflt-lab">Deals in — pick one or more</div>
+          <div class="bflt-chips" id="bfltCats"></div>
+          <div class="bflt-lab">And does — pick one or more</div>
+          <div class="bflt-chips" id="bfltModes"></div>
+          <div class="bflt-lab">Working area — type to search, tap to add</div>
+          <div class="area-pick">
+            <div class="area-chips" id="bfltAreaChips"></div>
+            <div class="area-inwrap">
+              <input id="bflt_area" placeholder="Type a village… e.g. go → Gota" oninput="bfltAreaFilter()" onfocus="bfltAreaFilter()" onkeydown="bfltAreaKey(event)" autocomplete="off">
+              <div class="area-drop" id="bfltAreaDrop"></div>
+            </div>
+          </div>
+          <div class="bflt-hint">Leave a row empty to ignore it. Picking <b>Flat</b> plus <b>Sell</b> and <b>Lease</b> shows brokers who sell <i>or</i> lease flats.</div>
+          <div style="margin-top:12px"><button class="bflt-clear" onclick="bfltReset()">Clear all filters</button></div>
+        </div>
+      </div>
       <div class="form-card">
         <div class="form-sec" style="border-bottom:none">
           <div id="brokerList"></div>
@@ -1296,13 +1346,109 @@
     if(window._fromLand){pickBroker(obj.code);show('v-add');}
     else{renderBrokerList();goBrokerList();}
   }
-  function goBrokerList(){renderBrokerList();show('v-brokerlist');setTab('land');}
+  /* ===== broker list filters ===== */
+  const BTYPE_ALL=BTYPE_GROUPS.flatMap(g=>g.items);
+  let bfltCats=new Set(), bfltModes=new Set(), bfltAreas=[];
+
+  function bfltToggle(){document.getElementById('bfltCard').classList.toggle('open');}
+  function bfltActive(){return bfltCats.size+bfltModes.size+bfltAreas.length;}
+
+  /* a broker's areas, however they were saved */
+  function brokerAreaList(b){
+    if(b.areaList&&b.areaList.length)return b.areaList;
+    return b.area?b.area.split(',').map(x=>x.trim()).filter(Boolean):[];
+  }
+  /* only offer areas that some saved broker actually works in */
+  function bfltAreaPool(){
+    const seen=new Map();
+    brokers.forEach(b=>brokerAreaList(b).forEach(a=>{const k=a.toLowerCase();if(!seen.has(k))seen.set(k,a);}));
+    return [...seen.values()].sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()));
+  }
+
+  function brokerMatches(b){
+    const types=b.types||{};
+    if(bfltCats.size||bfltModes.size){
+      // a category counts only if the broker does one of the picked modes in it
+      const cats=bfltCats.size?[...bfltCats]:Object.keys(types);
+      const hit=cats.some(c=>{
+        const modes=types[c];
+        if(!modes||!modes.length)return false;
+        return bfltModes.size?modes.some(m=>bfltModes.has(m)):true;
+      });
+      if(!hit)return false;
+    }
+    if(bfltAreas.length){
+      const mine=new Set(brokerAreaList(b).map(a=>a.toLowerCase()));
+      if(!bfltAreas.some(a=>mine.has(a.toLowerCase())))return false;
+    }
+    return true;
+  }
+
+  function renderBfltChips(){
+    const cbox=document.getElementById('bfltCats');
+    if(cbox)cbox.innerHTML=BTYPE_ALL.map(c=>
+      `<button class="fchip ${bfltCats.has(c)?'on':''}" onclick="bfltCat('${c.replace(/'/g,"\\'")}')">${c}</button>`).join('');
+    const mbox=document.getElementById('bfltModes');
+    if(mbox)mbox.innerHTML=BMODES.map(([m,lb])=>
+      `<button class="fchip m-${m} ${bfltModes.has(m)?'on':''}" onclick="bfltMode('${m}')">${lb}</button>`).join('');
+    const abox=document.getElementById('bfltAreaChips');
+    if(abox)abox.innerHTML=bfltAreas.map((a,i)=>`<span class="area-chip">${a}<b onclick="bfltAreaRemove(${i})">×</b></span>`).join('');
+    const badge=document.getElementById('bfltBadge');
+    if(badge){const n=bfltActive();badge.style.display=n?'':'none';badge.textContent=n;}
+  }
+  function bfltCat(c){bfltCats.has(c)?bfltCats.delete(c):bfltCats.add(c);renderBfltChips();renderBrokerList();}
+  function bfltMode(m){bfltModes.has(m)?bfltModes.delete(m):bfltModes.add(m);renderBfltChips();renderBrokerList();}
+  function bfltReset(){bfltCats=new Set();bfltModes=new Set();bfltAreas=[];
+    const inp=document.getElementById('bflt_area');if(inp)inp.value='';
+    renderBfltChips();renderBrokerList();}
+
+  function bfltAreaRemove(i){bfltAreas.splice(i,1);renderBfltChips();renderBrokerList();bfltAreaFilter();}
+  function bfltAreaAdd(name){
+    name=name.trim();if(!name)return;
+    if(!bfltAreas.some(a=>a.toLowerCase()===name.toLowerCase()))bfltAreas.push(name);
+    const inp=document.getElementById('bflt_area');if(inp)inp.value='';
+    renderBfltChips();renderBrokerList();bfltAreaFilter();
+  }
+  function bfltAreaFilter(){
+    const inp=document.getElementById('bflt_area'),drop=document.getElementById('bfltAreaDrop');if(!inp||!drop)return;
+    const q=inp.value.trim().toLowerCase();
+    const chosen=new Set(bfltAreas.map(a=>a.toLowerCase()));
+    let matches=bfltAreaPool().filter(a=>!chosen.has(a.toLowerCase())&&(!q||a.toLowerCase().includes(q)));
+    if(q)matches.sort((a,b)=>{const sa=a.toLowerCase().startsWith(q)?0:1,sb=b.toLowerCase().startsWith(q)?0:1;return sa-sb||a.toLowerCase().localeCompare(b.toLowerCase());});
+    drop.innerHTML=matches.length
+      ? matches.slice(0,60).map(a=>`<div class="area-opt" onclick="bfltAreaAdd('${a.replace(/'/g,"\\'")}')">${a}</div>`).join('')
+      : '<div class="area-empty">No saved broker works in an area matching that</div>';
+    drop.classList.add('show');
+  }
+  function bfltAreaKey(e){
+    if(e.key==='Enter'){e.preventDefault();const v=e.target.value.trim();
+      if(v){const m=bfltAreaPool().find(a=>a.toLowerCase()===v.toLowerCase());if(m)bfltAreaAdd(m);}}
+    if(e.key==='Escape'){document.getElementById('bfltAreaDrop').classList.remove('show');}
+  }
+  document.addEventListener('click',e=>{const w=e.target.closest('.area-inwrap');const d=document.getElementById('bfltAreaDrop');if(d&&!w)d.classList.remove('show');});
+
+  function goBrokerList(){renderBfltChips();renderBrokerList();show('v-brokerlist');setTab('land');}
   function renderBrokerList(){
     const box=document.getElementById('brokerList');if(!box)return;
-    box.innerHTML=brokers.length?brokers.map((b,i)=>`<div class="broker-row">
+    const rows=brokers.map((b,i)=>({b,i})).filter(r=>brokerMatches(r.b));
+
+    const cnt=document.getElementById('bfltCount');
+    if(cnt)cnt.textContent=brokers.length?(bfltActive()?rows.length+' of '+brokers.length+' brokers':brokers.length+' brokers'):'';
+
+    if(!brokers.length){
+      box.innerHTML='<div class="import-note" style="margin-top:0">No brokers saved yet. Tap “Add New Broker” to create one.</div>';return;
+    }
+    if(!rows.length){
+      box.innerHTML='<div class="import-note" style="margin-top:0">No broker matches these filters. <a onclick="bfltReset()" style="color:var(--gold-deep);font-weight:700;cursor:pointer;text-decoration:underline">Clear the filters</a> to see everyone.</div>';return;
+    }
+    box.innerHTML=rows.map(({b,i})=>{
+      const tel=String(b.mob||'').replace(/[^\d+]/g,'');
+      return `<div class="broker-row">
       <div><span class="bcode-tag">${b.code}</span> <b class="br-n" style="margin-left:6px">${b.name}</b>${b.pet?' <span class="il-sub">· '+b.pet+'</span>':''}
       <div class="il-sub">${[b.mob,b.comp,b.area].filter(Boolean).join(' · ')||'—'}</div>${b.types&&Object.keys(b.types).length?'<div style="margin-top:5px">'+typeBadges(b,4)+'</div>':''}</div>
-      <button class="br-edit-btn" onclick="event.stopPropagation();editBroker(${i})">✏️ Edit</button></div>`).join(''):'<div class="import-note" style="margin-top:0">No brokers saved yet. Tap “Add New Broker” to create one.</div>';
+      <div class="br-actions">${tel?`<a class="br-call-btn" href="tel:${tel}" onclick="event.stopPropagation()">📞 Call</a>`:''}
+      <button class="br-edit-btn" onclick="event.stopPropagation();editBroker(${i})">✏️ Edit</button></div></div>`;
+    }).join('');
   }
   function editBroker(i){
     brokerEdit=i;const b=brokers[i];show('v-broker');
