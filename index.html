@@ -331,7 +331,9 @@
     border:1px solid #bcd8c6;background:#eef7f1;color:#2f6b45;font-weight:700;font-size:13px;text-decoration:none;transition:.12s}
   .br-call-btn:hover{background:#dcefe4;border-color:#2f6b45;transform:translateY(-1px)}
   /* broker list — filters */
-  .bflt-card{margin-bottom:14px}
+  /* overflow:visible so the area dropdown can hang past the card instead of being clipped */
+  .bflt-card{margin-bottom:14px;overflow:visible}
+  .bflt-card .area-drop{max-height:min(320px,50vh)}
   .bflt-head{display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;user-select:none}
   .bflt-title{font-weight:800;font-size:14px;display:inline-flex;align-items:center;gap:7px}
   .bflt-badge{font-size:11px;font-weight:800;color:#231b0e;background:var(--gold-soft);border-radius:10px;padding:2px 8px}
