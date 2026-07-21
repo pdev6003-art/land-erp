@@ -488,6 +488,7 @@
   .mini-add{padding:9px 13px;border-radius:9px;border:1px solid var(--line-strong);background:var(--gold-tint);color:var(--gold-deep);font-weight:700;font-size:13px;white-space:nowrap;transition:.12s}
   .mini-add:hover{border-color:var(--gold)}
   /* rate slider */
+  .rate-eq{font-size:12.5px;font-weight:700;color:var(--gold-deep);margin-top:7px;min-height:16px}
   .rate-units{display:flex;gap:8px;margin-bottom:14px}
   .rate-units .chip{flex:0 0 auto}
   .slider-wrap{position:relative;height:36px;margin:6px 4px 2px}
@@ -660,7 +661,12 @@
           <div class="grid g3">
             <div class="field"><label>State</label><input id="f_state" value="Gujarat"></div>
             <div class="field"><label>District</label><input id="f_district" placeholder="e.g. Ahmedabad"></div>
-            <div class="field"><label>Village</label><input id="f_village" placeholder="e.g. Shela"></div>
+            <div class="field"><label>Village</label>
+              <div class="area-inwrap">
+                <input id="f_village" placeholder="Type a village… e.g. va → Vamaj, Vadasar" oninput="vilFilter()" onfocus="vilFilter()" onkeydown="vilKey(event)" autocomplete="off">
+                <div class="area-drop" id="vilDrop"></div>
+              </div>
+            </div>
           </div>
           <div class="grid g2" style="margin-top:16px">
             <div class="field"><label>Land type</label>
@@ -704,7 +710,8 @@
           <div class="grid g2">
             <div class="field"><label>Rate <span class="opt">(asking)</span></label>
               <div class="ig"><input id="f_rate" type="text" inputmode="numeric" placeholder="0" oninput="fmtNum(this);calcTotal()">
-                <select id="f_runit" onchange="calcTotal()"><option>per Sq. Yard</option><option>per Sq. Feet</option><option>per Sq. Meter</option></select></div>
+                <select id="f_runit" onchange="calcTotal()"><option>per Sq. Yard</option><option>per Sq. Feet</option><option>per Sq. Meter</option><option>per Bigha</option><option>per Acre</option><option>per Hectare</option></select></div>
+              <div class="rate-eq" id="rateEq"></div>
             </div>
             <div class="field"><label>&nbsp;</label>
               <div class="calc-box" style="margin-top:0">
@@ -716,6 +723,7 @@
           <div class="grid g2" style="margin-top:16px">
             <div class="field"><label>Negotiable rate <span class="opt">(what it can come down to — same unit as rate)</span></label>
               <input id="f_nrate" type="text" inputmode="numeric" placeholder="0" oninput="fmtNum(this);calcNeg()">
+              <div class="rate-eq" id="nrateEq"></div>
             </div>
             <div class="field"><label>&nbsp;</label>
               <div class="calc-box neg" style="margin-top:0">
@@ -1082,7 +1090,7 @@
   const sb=supabase.createClient(SB_URL,SB_KEY);
 
   /* ===== working-area autocomplete (seeded village list, grows over time) ===== */
-  let AREAS=["Ambali", "Anadej", "Beelu", "Bhadaj", "Bharanpur", "Bhimsan", "Bopal", "Chamdrasan", "Chandlodiya", "Chatlodia", "Chekhla", "Chenpur", "Chharodi", "Dantali", "Daran", "Doder", "Fuletra", "Ghoda", "Gokulpura", "Govindpura", "Jagatpur", "Jaspur", "Jethalaj", "Karoli", "Khadraj", "Khanderavpura", "Khavad", "Kolad", "Kongari", "Lakshmanpura", "Lapkaman", "Lilapur", "Medha", "Memnagar", "Nadan", "Namdoli", "Nasmed", "Ognaj", "Panchod Pura", "Rakampur", "Rampura", "Ranip", "Rastrapur", "Sanavad", "Santej", "Sedfa", "Shilaj", "Sola", "Thaltej", "Thol", "Tragad", "Vadasar", "Vadavli", "Vadgam", "Vamaj", "Vyana", "Yekra", "Zundal"];
+  let AREAS=["Ambali", "Anadej", "Beelu", "Bhadaj", "Bharanpur", "Bhimsan", "Bopal", "Chamdrasan", "Chandlodiya", "Chatlodia", "Chekhla", "Chenpur", "Chharodi", "Dantali", "Daran", "Dhamaj", "Doder", "Fuletra", "Ghoda", "Gokulpura", "Govindpura", "Jagatpur", "Jaspur", "Jethalaj", "Jetpura", "Karoli", "Khadraj", "Khanderavpura", "Khavad", "Kolad", "Kongari", "Lakshmanpura", "Lapkaman", "Lilapur", "Meda Adraj", "Medha", "Memnagar", "Nadan", "Namdoli", "Nasmed", "Ognaj", "Palsana", "Panchod Pura", "Pratappura", "Rakampur", "Rampura", "Ranip", "Ransol", "Rastrapur", "Sabaspura", "Sanavad", "Santej", "Sedfa", "Shertha", "Shilaj", "Sola", "Thaltej", "Thol", "Tragad", "Vadasar", "Vadavli", "Vadgam", "Vamaj", "Vyana", "Yekra", "Zundal"];
   let areaSel=[];   // chosen villages for the broker currently being edited
   function areaSort(){AREAS.sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()));}
   function loadAreas(){try{const saved=JSON.parse(localStorage.getItem('landAreas')||'null');if(saved&&saved.length){const set=new Set(AREAS.map(a=>a.toLowerCase()));saved.forEach(a=>{if(!set.has(a.toLowerCase()))AREAS.push(a);});areaSort();}}catch(e){}}
@@ -1119,6 +1127,31 @@
   }
   document.addEventListener('click',e=>{const w=e.target.closest('.area-inwrap');const d=document.getElementById('areaDrop');if(d&&!w)d.classList.remove('show');});
   loadAreas();
+
+  /* ===== village autocomplete on the land form (one village per land) ===== */
+  function vilPick(name){
+    const inp=document.getElementById('f_village');if(!inp)return;
+    inp.value=name;
+    if(!AREAS.some(a=>a.toLowerCase()===name.toLowerCase())){AREAS.push(name);areaSort();saveAreas();}
+    document.getElementById('vilDrop').classList.remove('show');
+  }
+  function vilFilter(){
+    const inp=document.getElementById('f_village'),drop=document.getElementById('vilDrop');if(!inp||!drop)return;
+    const q=inp.value.trim().toLowerCase();
+    let matches=AREAS.filter(a=>!q||a.toLowerCase().includes(q));
+    if(q)matches.sort((a,b)=>{const sa=a.toLowerCase().startsWith(q)?0:1,sb=b.toLowerCase().startsWith(q)?0:1;return sa-sb||a.toLowerCase().localeCompare(b.toLowerCase());});
+    let html=matches.slice(0,60).map(a=>`<div class="area-opt" onclick="vilPick('${a.replace(/'/g,"\\'")}')">${a}</div>`).join('');
+    const exact=AREAS.some(a=>a.toLowerCase()===q);
+    if(q&&!exact)html=`<div class="area-opt area-new" onclick="vilPick('${inp.value.trim().replace(/'/g,"\\'")}')">➕ Add “${inp.value.trim()}” as a new village</div>`+html;
+    if(!html)html='<div class="area-empty">Keep typing to add it as new</div>';
+    drop.innerHTML=html;drop.classList.add('show');
+  }
+  function vilKey(e){
+    if(e.key==='Enter'){e.preventDefault();const v=e.target.value.trim();
+      if(v){const m=AREAS.find(a=>a.toLowerCase()===v.toLowerCase());vilPick(m||v);}}
+    if(e.key==='Escape'){document.getElementById('vilDrop').classList.remove('show');}
+  }
+  document.addEventListener('click',e=>{const w=e.target.closest('.area-inwrap');const d=document.getElementById('vilDrop');if(d&&!w)d.classList.remove('show');});
 
   const fmt = n => n ? '₹' + Number(n).toLocaleString('en-IN') : '—';
   function words(n){n=Number(n)||0;if(!n)return '—';
@@ -1364,9 +1397,10 @@
     if(b.areaList&&b.areaList.length)return b.areaList;
     return b.area?b.area.split(',').map(x=>x.trim()).filter(Boolean):[];
   }
-  /* only offer areas that some saved broker actually works in */
+  /* the full village list, plus any area a broker has that is not in it yet */
   function bfltAreaPool(){
     const seen=new Map();
+    AREAS.forEach(a=>seen.set(a.toLowerCase(),a));
     brokers.forEach(b=>brokerAreaList(b).forEach(a=>{const k=a.toLowerCase();if(!seen.has(k))seen.set(k,a);}));
     return [...seen.values()].sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()));
   }
@@ -1423,7 +1457,7 @@
     if(q)matches.sort((a,b)=>{const sa=a.toLowerCase().startsWith(q)?0:1,sb=b.toLowerCase().startsWith(q)?0:1;return sa-sb||a.toLowerCase().localeCompare(b.toLowerCase());});
     drop.innerHTML=matches.length
       ? matches.slice(0,60).map(a=>`<div class="area-opt" onclick="bfltAreaAdd('${a.replace(/'/g,"\\'")}')">${a}</div>`).join('')
-      : '<div class="area-empty">No saved broker works in an area matching that</div>';
+      : '<div class="area-empty">No village matches that</div>';
     drop.classList.add('show');
   }
   function bfltAreaKey(e){
@@ -2172,16 +2206,26 @@
   }
   const numVal = k => +String(f(k).value).replace(/,/g,'')||0;
 
+  /* a rate quoted in any unit, shown per sq yard — the unit everyone here thinks in */
+  function perSqYd(rate,unit){return rate*9/F[unit];}
+  function showRateEq(elId,rate,unit){
+    const el=document.getElementById(elId);if(!el)return;
+    if(!rate||unit==='Sq. Yard'){el.textContent='';return;}
+    const v=perSqYd(rate,unit);
+    el.textContent='= ₹'+v.toLocaleString('en-IN',{maximumFractionDigits:v<100?2:0})+' per sq yard';
+  }
   function calcTotal(){
     const a=numVal('sarea'), au=f('sunit').value, r=numVal('rate'), ru=f('runit').value.replace('per ','');
     const el=document.getElementById('rateTotal');
     if(a&&r){const t=(a*F[au])*(r/F[ru]);el.textContent=words(t);}else el.textContent='—';
+    showRateEq('rateEq',r,ru);
     calcNeg();
   }
   function calcNeg(){
     const a=numVal('sarea'), au=f('sunit').value, n=numVal('nrate'), r=numVal('rate'), ru=f('runit').value.replace('per ','');
     const el=document.getElementById('negTotal'), d=document.getElementById('negDiff');
     if(a&&n){el.textContent=words((a*F[au])*(n/F[ru]));}else el.textContent='—';
+    showRateEq('nrateEq',n,ru);
     if(r&&n&&r>n){const pct=((r-n)/r*100).toFixed(1);d.textContent='₹'+(r-n).toLocaleString('en-IN')+' below asking ('+pct+'% less)';}
     else d.textContent='survey area × negotiable rate';
     calcPay();
