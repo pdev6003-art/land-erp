@@ -353,11 +353,33 @@
   .bscan-status{font-size:13px;color:var(--muted);font-weight:600;flex:1;min-width:180px}
   .bscan-status.ok{color:#2f6b45}
   .bscan-status.err{color:#a5462f}
-  /* broker list — call button */
-  .br-actions{display:flex;align-items:center;gap:8px;align-self:center;flex-shrink:0}
+  /* broker list — search */
+  .bsearch-wrap{position:relative;display:flex;align-items:center;margin-bottom:14px}
+  .bsearch-ico{position:absolute;left:15px;font-size:15px;pointer-events:none;opacity:.6}
+  .bsearch-wrap input{width:100%;padding:14px 42px;border-radius:12px;border:1px solid var(--line-strong);
+    background:#fff;font-family:inherit;font-size:14.5px;box-shadow:var(--shadow)}
+  .bsearch-wrap input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(191,155,48,.15);outline:none}
+  .bsearch-x{position:absolute;right:9px;width:28px;height:28px;border:none;background:none;color:var(--muted);
+    font-size:21px;line-height:1;cursor:pointer;border-radius:50%;display:none}
+  .bsearch-x:hover{background:var(--gold-tint);color:var(--text)}
+  .bsearch-wrap.has .bsearch-x{display:block}
+  /* broker list — call buttons */
+  .br-actions{display:flex;align-items:center;gap:8px;align-self:center;flex-wrap:wrap;justify-content:flex-end}
   .br-call-btn{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;padding:9px 16px;border-radius:10px;
     border:1px solid #bcd8c6;background:#eef7f1;color:#2f6b45;font-weight:700;font-size:13px;text-decoration:none;transition:.12s}
   .br-call-btn:hover{background:#dcefe4;border-color:#2f6b45;transform:translateY(-1px)}
+  .br-call-btn .cn{font-weight:600;opacity:.75;max-width:88px;overflow:hidden;text-overflow:ellipsis}
+  .br-rera{display:inline-block;font-size:10.5px;font-weight:700;color:var(--muted);background:var(--ivory);
+    border:1px solid var(--line-strong);border-radius:9px;padding:1px 7px;margin-left:6px;vertical-align:1px}
+  /* duplicate-broker warning */
+  .dup-warn{display:none;margin:12px 0 0;padding:13px 15px;border-radius:11px;background:#fdf3ec;
+    border:1.5px solid #e0a07f;font-size:13px;line-height:1.5;color:#7a3a20}
+  .dup-warn.show{display:block}
+  .dup-warn b{color:#a5462f}
+  .dup-warn .dw-act{margin-top:9px;display:flex;gap:9px;flex-wrap:wrap}
+  .dup-warn button{padding:8px 15px;border-radius:9px;border:1px solid #e0a07f;background:#fff;
+    color:#a5462f;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit}
+  .dup-warn button:hover{background:#fdeeea}
   /* broker list — filters */
   /* overflow:visible so the area dropdown can hang past the card instead of being clipped */
   .bflt-card{margin-bottom:14px;overflow:visible}
@@ -537,6 +559,11 @@
     .wrap{padding:16px 14px 50px}
     .topbar{padding:11px 14px}.topbar .name{font-size:14px}
     .lock-card h1{font-size:22px}
+    /* two call buttons + Edit will not fit beside the details on a phone */
+    .broker-row>div:first-child{flex:1 1 100%;min-width:0}
+    .br-actions{width:100%;justify-content:flex-start;margin-top:4px}
+    .br-call-btn,.br-edit-btn{flex:1 1 0;min-width:0;justify-content:center;padding:10px 8px}
+    .br-call-btn .cn{max-width:64px}
     .user-chip .uname{display:none}
     .hide-sm{display:none}
     .page-head h2{font-size:20px}
@@ -876,8 +903,10 @@
           <div class="grid g2">
             <div class="field"><label>Broker code <span class="opt">(auto — you can change it)</span></label><input id="b_code" placeholder="#0001"></div>
             <div class="field"><label>Pet / reference name <span class="opt">(how you remember them)</span></label><input id="b_pet" placeholder="e.g. Shela vada Kiran"></div>
-            <div class="field"><label>Broker name</label><input id="b_name" placeholder="e.g. Kiran Patel"></div>
-            <div class="field"><label>Mobile</label><input id="b_mob" placeholder="e.g. 98250 11223"></div>
+            <div class="field"><label>Broker name</label><input id="b_name" placeholder="e.g. Kiran Patel" oninput="dupSoon()"></div>
+            <div class="field"><label>Mobile</label><input id="b_mob" placeholder="e.g. 98250 11223" oninput="dupSoon()"></div>
+            <div class="field"><label>Second name <span class="opt">(optional — partner on the same card)</span></label><input id="b_name2" placeholder="e.g. Pinakin Patel" oninput="dupSoon()"></div>
+            <div class="field"><label>Second mobile <span class="opt">(optional)</span></label><input id="b_mob2" placeholder="e.g. 98250 97687" oninput="dupSoon()"></div>
           </div>
         </div>
         <div class="form-sec">
@@ -885,6 +914,7 @@
           <div class="grid g2">
             <div class="field"><label>Email <span class="opt">(optional)</span></label><input id="b_email" placeholder="e.g. kiran@estate.com"></div>
             <div class="field"><label>Company name <span class="opt">(optional)</span></label><input id="b_comp" placeholder="e.g. Patel Estates"></div>
+            <div class="field"><label>RERA registration no. <span class="opt">(optional)</span></label><input id="b_rera" placeholder="e.g. AA03730/040727R1"></div>
             <div class="field full"><label>Address <span class="opt">(optional)</span></label><input id="b_addr" placeholder="e.g. A/202, Business Hub, Gota, Ahmedabad"></div>
             <div class="field full"><label>Working area <span class="opt">(type to search villages — tap to add, or type a new one)</span></label>
               <div class="area-pick">
@@ -902,6 +932,7 @@
           <div class="import-note" style="margin:-6px 0 12px">Tick what this broker deals in — and for each, whether they do <b style="color:#2f6b45">Buy</b>, <b style="color:#a5462f">Sell</b>, <b style="color:#3a6079">Lease</b> (one or multiple).</div>
           <div id="brokerTypes"></div>
         </div>
+        <div class="dup-warn" id="dupWarn"></div>
         <div class="form-actions">
           <button class="btn-ghost" onclick="brokerBack()">Cancel</button>
           <button class="btn-broker" onclick="saveBroker()">Save broker</button>
@@ -915,6 +946,11 @@
       <div class="page-head">
         <div><h2>All Brokers</h2><p>Everyone you\'ve saved — tap a card to edit their details.</p></div>
         <button class="btn-broker big" onclick="goBroker()">＋ Add New Broker</button>
+      </div>
+      <div class="bsearch-wrap">
+        <span class="bsearch-ico">🔍</span>
+        <input id="bSearch" placeholder="Search by name, company, mobile or code…" oninput="renderBrokerList()" autocomplete="off">
+        <button class="bsearch-x" id="bSearchX" onclick="bSearchClear()" title="Clear">×</button>
       </div>
       <div class="form-card bflt-card" id="bfltCard">
         <div class="bflt-head" onclick="bfltToggle()">
@@ -1285,8 +1321,8 @@
 
   /* ===== brokerage types ===== */
   const BTYPE_GROUPS=[
-    {h:null,items:['Land','Industrial plot','Village / Agricultural land','Non-agricultural (NA) land','Office','Showrooms','Warehouse']},
-    {h:'Residential properties — flat / bungalow',items:['Flat','Bungalow']}
+    {h:null,items:['Land','Industrial plot','Residential plot','Village / Agricultural land','Non-agricultural (NA) land','Office','Showrooms','Warehouse']},
+    {h:'Residential properties — flat / bungalow',items:['Flat','Bungalow','Weekend / Farm house']}
   ];
   const BMODES=[['buy','Buy'],['sell','Sell'],['lease','Lease']];
   let bTypesSel={};   // cat -> Set of modes
@@ -1453,15 +1489,30 @@
       try{out=await res.json();}catch(e){}
       if(!res.ok)throw new Error(out.error||'Scan failed.');
 
-      const map={name:'b_name',mobile:'b_mob',email:'b_email',company:'b_comp',address:'b_addr'};
+      const map={name:'b_name',mobile:'b_mob',name2:'b_name2',mobile2:'b_mob2',
+                 email:'b_email',company:'b_comp',address:'b_addr',rera:'b_rera'};
+      const LABEL={name:'name',mobile:'mobile',name2:'second name',mobile2:'second mobile',
+                   email:'email',company:'company',address:'address',rera:'RERA no.'};
       const filled=[];
       Object.keys(map).forEach(k=>{
         const v=(out[k]||'').trim();
-        if(v){bEl(map[k]).value=v;filled.push(k==='company'?'company':k);}
+        if(v){bEl(map[k]).value=v;filled.push(LABEL[k]);}
       });
+
+      // what the card says they deal in -> tick the brokerage-type grid
+      let dealCount=0;
+      (out.deals||[]).forEach(d=>{
+        if(!d||!d.category||!Array.isArray(d.modes)||!d.modes.length)return;
+        if(!BTYPE_ALL.includes(d.category))return;
+        if(!bTypesSel[d.category])bTypesSel[d.category]=new Set();
+        d.modes.forEach(m=>bTypesSel[d.category].add(m));
+        dealCount++;
+      });
+      if(dealCount){renderBTypes();filled.push(dealCount+' brokerage type'+(dealCount>1?'s':''));}
 
       if(!filled.length){cardStatus('No details found on that photo — try a clearer, straighter shot.','err');}
       else{cardStatus('Filled '+filled.join(', ')+'. Check the fields, then Save broker.','ok');}
+      checkDuplicate();
     }catch(err){
       cardStatus(err.message||'Scan failed. Please try again.','err');
     }finally{
@@ -1475,13 +1526,61 @@
   const brokerByCode=c=>brokers.find(b=>b.code===c);
   function nextBrokerCode(){let mx=0;brokers.forEach(b=>{const n=+String(b.code).replace(/\D/g,'');if(n>mx)mx=n;});return '#'+String(mx+1).padStart(4,'0');}
   function goBroker(fromLand){window._fromLand=!!fromLand;brokerEdit=-1;
-    ['b_code','b_pet','b_name','b_mob','b_email','b_comp','b_addr','b_area'].forEach(k=>bEl(k).value='');
+    ['b_code','b_pet','b_name','b_mob','b_name2','b_mob2','b_email','b_comp','b_addr','b_rera','b_area'].forEach(k=>bEl(k).value='');
+    dupClear();
     cardStatus('Pick the front and back — the details fill in below for you to check.');
     areaSel=[];renderAreaChips();
     bEl('b_code').value=nextBrokerCode();bTypesSel={};renderBTypes();
     document.getElementById('brokerTitle').textContent='Add a New Broker';
     renderBrokerList();show('v-broker');setTab('land');}
   function brokerBack(){if(window._fromLand){show('v-add');}else goDash();}
+
+  /* ===== is this broker already saved? ===== */
+  const normPhone=v=>String(v||'').replace(/\D/g,'').replace(/^91(?=\d{10}$)/,'');
+  const normName=v=>String(v||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  /* every phone/name/email a broker record holds, so a partner card matches too */
+  const allPhones=b=>[b.mob,b.mob2].map(normPhone).filter(p=>p.length>=7);
+  const allNames=b=>[b.name,b.name2].map(normName).filter(Boolean);
+
+  function findDuplicates(){
+    const g=k=>bEl(k).value.trim();
+    const phones=[g('b_mob'),g('b_mob2')].map(normPhone).filter(p=>p.length>=7);
+    const names=[g('b_name'),g('b_name2')].map(normName).filter(Boolean);
+    const email=g('b_email').toLowerCase(), comp=normName(g('b_comp')), rera=normName(g('b_rera'));
+    const hits=[];
+    brokers.forEach((b,i)=>{
+      if(i===brokerEdit)return;                       // never flag the record being edited
+      const why=[];
+      const bp=allPhones(b), bn=allNames(b);
+      if(phones.some(p=>bp.includes(p)))why.push('same mobile number');
+      if(rera&&normName(b.rera)===rera)why.push('same RERA number');
+      if(email&&String(b.email||'').toLowerCase()===email)why.push('same email');
+      // a shared name alone is weak (many Patels) — only flag it alongside the same company
+      if(names.some(n=>bn.includes(n))){
+        if(comp&&normName(b.comp)===comp)why.push('same name and company');
+        else if(!why.length)why.push('same name');
+      }
+      if(why.length)hits.push({b,i,why:[...new Set(why)]});
+    });
+    return hits;
+  }
+  function dupClear(){const el=bEl('dupWarn');if(el){el.classList.remove('show');el.innerHTML='';}}
+  let dupTimer=null;
+  function dupSoon(){clearTimeout(dupTimer);dupTimer=setTimeout(checkDuplicate,450);}
+  function checkDuplicate(){
+    const el=bEl('dupWarn');if(!el)return [];
+    const hits=findDuplicates();
+    if(!hits.length){dupClear();return [];}
+    el.innerHTML='<b>⚠️ This broker may already be saved.</b>'+
+      hits.slice(0,3).map(h=>`<div style="margin-top:7px">${h.b.code} · <b>${h.b.name}</b>`+
+        (h.b.comp?' · '+h.b.comp:'')+(h.b.mob?' · '+h.b.mob:'')+
+        `<div style="font-size:12px;opacity:.85">Matches on ${h.why.join(' and ')}.</div></div>`).join('')+
+      `<div class="dw-act"><button type="button" onclick="editBroker(${hits[0].i})">Open ${hits[0].b.name} instead</button>`+
+      `<button type="button" onclick="dupClear()">Save as a separate broker</button></div>`;
+    el.classList.add('show');
+    return hits;
+  }
+
   async function saveBroker(){
     const g=k=>bEl(k).value.trim();
     if(!g('b_name')){alert('Broker name is needed.');return;}
@@ -1489,9 +1588,22 @@
     if(!code.startsWith('#'))code='#'+code;
     const dup=brokers.findIndex(b=>b.code===code);
     if(dup>=0&&dup!==brokerEdit){alert('Code '+code+' is already used by '+brokers[dup].name+'. Pick another code.');return;}
+    // warn once about a likely duplicate; saving again goes through
+    const hits=checkDuplicate();
+    if(hits.length&&!window._dupOk){
+      window._dupOk=true;
+      bEl('dupWarn').scrollIntoView({behavior:'smooth',block:'center'});
+      alert('This looks like a broker you already saved:\n\n'+
+        hits.slice(0,3).map(h=>'• '+h.b.code+' '+h.b.name+(h.b.mob?' — '+h.b.mob:'')+' ('+h.why.join(', ')+')').join('\n')+
+        '\n\nCheck the note above the Save button. Tap Save broker again if you really want a separate entry.');
+      return;
+    }
+    window._dupOk=false;
     const types={};Object.entries(bTypesSel).forEach(([c,st])=>{if(st.size)types[c]=[...st];});
     const leftover=g('b_area');if(leftover){const m=AREAS.find(a=>a.toLowerCase()===leftover.toLowerCase());areaAdd(m||leftover);}
-    const obj={code,pet:g('b_pet'),name:g('b_name'),mob:g('b_mob'),email:g('b_email'),comp:g('b_comp'),addr:g('b_addr'),area:areaSel.join(', '),areaList:areaSel.slice(),types};
+    const obj={code,pet:g('b_pet'),name:g('b_name'),mob:g('b_mob'),name2:g('b_name2'),mob2:g('b_mob2'),
+      email:g('b_email'),comp:g('b_comp'),addr:g('b_addr'),rera:g('b_rera'),
+      area:areaSel.join(', '),areaList:areaSel.slice(),types};
     try{
       if(brokerEdit>=0){
         const id=brokers[brokerEdit]._id;obj._id=id;
@@ -1588,32 +1700,54 @@
   }
   document.addEventListener('click',e=>{const w=e.target.closest('.area-inwrap');const d=document.getElementById('bfltAreaDrop');if(d&&!w)d.classList.remove('show');});
 
+  function bSearchClear(){const s=document.getElementById('bSearch');if(s){s.value='';s.focus();}renderBrokerList();}
+  function brokerSearchHit(b,q){
+    if(!q)return true;
+    return [b.code,b.name,b.name2,b.pet,b.comp,b.mob,b.mob2,b.email,b.rera,b.area]
+      .filter(Boolean).join(' ').toLowerCase().includes(q);
+  }
   function goBrokerList(){renderBfltChips();renderBrokerList();show('v-brokerlist');setTab('land');}
   function renderBrokerList(){
     const box=document.getElementById('brokerList');if(!box)return;
-    const rows=brokers.map((b,i)=>({b,i})).filter(r=>brokerMatches(r.b));
+    const sBox=document.getElementById('bSearch');
+    const q=sBox?sBox.value.trim().toLowerCase():'';
+    const wrap=sBox?sBox.closest('.bsearch-wrap'):null;
+    if(wrap)wrap.classList.toggle('has',!!q);
+    const rows=brokers.map((b,i)=>({b,i})).filter(r=>brokerMatches(r.b)&&brokerSearchHit(r.b,q));
 
     const cnt=document.getElementById('bfltCount');
-    if(cnt)cnt.textContent=brokers.length?(bfltActive()?rows.length+' of '+brokers.length+' brokers':brokers.length+' brokers'):'';
+    if(cnt)cnt.textContent=brokers.length?((bfltActive()||q)?rows.length+' of '+brokers.length+' brokers':brokers.length+' brokers'):'';
 
     if(!brokers.length){
       box.innerHTML='<div class="import-note" style="margin-top:0">No brokers saved yet. Tap “Add New Broker” to create one.</div>';return;
     }
     if(!rows.length){
-      box.innerHTML='<div class="import-note" style="margin-top:0">No broker matches these filters. <a onclick="bfltReset()" style="color:var(--gold-deep);font-weight:700;cursor:pointer;text-decoration:underline">Clear the filters</a> to see everyone.</div>';return;
+      const clear=q?`<a onclick="bSearchClear()" style="color:var(--gold-deep);font-weight:700;cursor:pointer;text-decoration:underline">Clear the search</a>`
+                   :`<a onclick="bfltReset()" style="color:var(--gold-deep);font-weight:700;cursor:pointer;text-decoration:underline">Clear the filters</a>`;
+      box.innerHTML='<div class="import-note" style="margin-top:0">No broker matches. '+clear+' to see everyone.</div>';return;
     }
     box.innerHTML=rows.map(({b,i})=>{
-      const tel=String(b.mob||'').replace(/[^\d+]/g,'');
+      const callBtn=(num,who)=>{
+        const tel=String(num||'').replace(/[^\d+]/g,'');
+        if(!tel)return '';
+        return `<a class="br-call-btn" href="tel:${tel}" onclick="event.stopPropagation()">📞 Call${who?' <span class="cn">'+who+'</span>':''}</a>`;
+      };
+      // name the buttons only when there are two, so a single broker stays clean
+      const two=b.mob&&b.mob2;
+      const calls=callBtn(b.mob,two?(b.name||'').split(' ')[0]:'')+
+                  (b.mob2?callBtn(b.mob2,(b.name2||'').split(' ')[0]||'2nd'):'');
+      const line2=[b.mob,b.mob2,b.comp,b.area].filter(Boolean).join(' · ')||'—';
       return `<div class="broker-row">
-      <div><span class="bcode-tag">${b.code}</span> <b class="br-n" style="margin-left:6px">${b.name}</b>${b.pet?' <span class="il-sub">· '+b.pet+'</span>':''}
-      <div class="il-sub">${[b.mob,b.comp,b.area].filter(Boolean).join(' · ')||'—'}</div>${b.types&&Object.keys(b.types).length?'<div style="margin-top:5px">'+typeBadges(b,4)+'</div>':''}</div>
-      <div class="br-actions">${tel?`<a class="br-call-btn" href="tel:${tel}" onclick="event.stopPropagation()">📞 Call</a>`:''}
+      <div><span class="bcode-tag">${b.code}</span> <b class="br-n" style="margin-left:6px">${b.name}</b>${b.name2?' <span class="il-sub">& '+b.name2+'</span>':''}${b.pet?' <span class="il-sub">· '+b.pet+'</span>':''}${b.rera?'<span class="br-rera">RERA</span>':''}
+      <div class="il-sub">${line2}</div>${b.types&&Object.keys(b.types).length?'<div style="margin-top:5px">'+typeBadges(b,4)+'</div>':''}</div>
+      <div class="br-actions">${calls}
       <button class="br-edit-btn" onclick="event.stopPropagation();editBroker(${i})">✏️ Edit</button></div></div>`;
     }).join('');
   }
   function editBroker(i){
-    brokerEdit=i;const b=brokers[i];show('v-broker');
+    brokerEdit=i;const b=brokers[i];show('v-broker');window._dupOk=false;dupClear();
     bEl('b_code').value=b.code;bEl('b_pet').value=b.pet;bEl('b_name').value=b.name;bEl('b_mob').value=b.mob;
+    bEl('b_name2').value=b.name2||'';bEl('b_mob2').value=b.mob2||'';bEl('b_rera').value=b.rera||'';
     bEl('b_email').value=b.email;bEl('b_comp').value=b.comp;bEl('b_addr').value=b.addr;bEl('b_area').value='';
     areaSel=(b.areaList&&b.areaList.length)?b.areaList.slice():(b.area?b.area.split(',').map(x=>x.trim()).filter(Boolean):[]);
     areaSel.forEach(a=>{if(!AREAS.some(x=>x.toLowerCase()===a.toLowerCase()))AREAS.push(a);});areaSort();renderAreaChips();
@@ -1624,7 +1758,7 @@
   function bDrop(){
     const q=(bEl('f_bsearch').value||'').toLowerCase();
     const list=bEl('bDropList');list.classList.add('show');
-    const m=brokers.filter(b=>(b.code+' '+b.name+' '+b.pet+' '+b.comp+' '+b.area).toLowerCase().includes(q));
+    const m=brokers.filter(b=>[b.code,b.name,b.name2,b.pet,b.comp,b.mob,b.mob2,b.area].filter(Boolean).join(' ').toLowerCase().includes(q));
     list.innerHTML=(m.length?m.map(b=>`<div class="il-item" onclick="pickBroker('${b.code}')">
         <div><span class="bcode-tag">${b.code}</span> <b style="margin-left:6px">${b.name}</b>${b.pet?'<div class="il-sub">'+b.pet+'</div>':''}</div>
         <div class="il-sub">${b.mob||''}</div></div>`).join(''):'<div class="il-empty">No broker matches.</div>')
@@ -1634,8 +1768,8 @@
     selBroker=code;const b=brokerByCode(code);
     bEl('f_bsearch').value='';bEl('bDropList').classList.remove('show');
     const card=bEl('bSelCard');
-    if(b){card.classList.add('show');card.innerHTML=`<div class="bs-head"><div><span class="bcode-tag">${b.code}</span> <span class="bs-name" style="margin-left:6px">${b.name}</span>${b.pet?' <span class="il-sub">· '+b.pet+'</span>':''}</div><span class="bs-x" onclick="clearBroker()">✕ change</span></div>
-      <div class="bs-sub">${[b.mob,b.email,b.comp].filter(Boolean).join(' · ')||''}${b.area?'<br>Works in: '+b.area:''}${b.addr?'<br>'+b.addr:''}</div>${b.types&&Object.keys(b.types).length?'<div style=\"margin-top:8px\">'+typeBadges(b)+'</div>':''}`;}
+    if(b){card.classList.add('show');card.innerHTML=`<div class="bs-head"><div><span class="bcode-tag">${b.code}</span> <span class="bs-name" style="margin-left:6px">${b.name}</span>${b.name2?' <span class="il-sub">& '+b.name2+'</span>':''}${b.pet?' <span class="il-sub">· '+b.pet+'</span>':''}</div><span class="bs-x" onclick="clearBroker()">✕ change</span></div>
+      <div class="bs-sub">${[b.mob,b.mob2,b.email,b.comp].filter(Boolean).join(' · ')||''}${b.area?'<br>Works in: '+b.area:''}${b.addr?'<br>'+b.addr:''}</div>${b.types&&Object.keys(b.types).length?'<div style=\"margin-top:8px\">'+typeBadges(b)+'</div>':''}`;}
     else clearBroker();
   }
   function clearBroker(){selBroker=null;bEl('bSelCard').classList.remove('show');bEl('bSelCard').innerHTML='';}

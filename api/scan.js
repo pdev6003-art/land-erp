@@ -9,19 +9,36 @@ const MODEL = 'claude-sonnet-4-6';
 const MAX_IMAGES = 4;
 const MAX_TEXT = 6000;
 
-const CARD_PROMPT = `You are reading photographs of a business/visiting card. The photos may be the front and back of the same card.
+const CARD_CATEGORIES = [
+  'Land', 'Industrial plot', 'Residential plot', 'Village / Agricultural land',
+  'Non-agricultural (NA) land', 'Office', 'Showrooms', 'Warehouse',
+  'Flat', 'Bungalow', 'Weekend / Farm house'
+];
 
-Extract the contact details. The card may be in English, Gujarati, or both — read both scripts. If the same detail appears in two scripts, prefer the English/Latin version.
+const CARD_PROMPT = `You are reading photographs of a business/visiting card belonging to a property broker or estate agent in India. The photos may be the front and back of the same card.
+
+The card may be in English, Gujarati, or both — read both scripts. If the same detail appears in two scripts, prefer the English/Latin version.
 
 Return ONLY a JSON object, with no markdown fences and no commentary, in exactly this shape:
-{"name":"","mobile":"","email":"","company":"","address":""}
+{"name":"","mobile":"","name2":"","mobile2":"","email":"","company":"","address":"","rera":"","deals":[]}
 
 Rules:
-- name: the person's name only (drop titles like Shri/Mr/Er and qualifications).
-- mobile: one primary mobile number, digits and spaces only, no +91 country code, no labels.
+- name / mobile: the FIRST person on the card and their mobile number.
+- name2 / mobile2: a SECOND person and their number, if the card shows two people. Many partnership cards print one name and number in each top corner — keep each name with the number printed beside it. If the card shows two numbers for the SAME single person, put the second number in mobile2 and leave name2 "". If there is only one person and one number, leave both name2 and mobile2 "".
+- Never split one person's name across name and name2.
+- All mobile numbers: digits and spaces only. Drop +91, "M.", "Mo.", and WhatsApp/phone icons. An "Office :" landline is NOT a mobile — put it in neither field.
 - email: lowercase.
-- company: the firm or business name.
-- address: the full postal address on one line, comma separated.
+- company: the firm or business name (e.g. "Dhaval Patel Real Estate", "Ashok Negi Real Estate Agent"). If the card shows only a person's name with a tagline like "Luxury Realtor", leave company "".
+- address: the full postal address on one line, comma separated. Do not include the email or phone numbers here.
+- rera: the RERA registration number if printed (often labelled "RERA Reg.", "RERA No.", "Rera Reg."). Copy it exactly as printed, e.g. "AA03730/040727R1". "" if absent.
+- deals: what the card says the broker deals in. Cards usually print a strip like "Flat • Bunglow • Office • Shops • Plot — Rent & Sale" or "Land Purchase & Sell | Commercial and Retail Leasing".
+  Each entry is {"category":"...","modes":["..."]}.
+  category MUST be exactly one of: ${CARD_CATEGORIES.map(c => '"' + c + '"').join(', ')}.
+  Map the card's wording: "Shops"/"Shop" -> "Showrooms"; "Bunglow"/"Banglow" -> "Bungalow"; "Plot"/"Plots" alone -> "Residential plot"; "Farm House"/"Weekend Home" -> "Weekend / Farm house"; "Agriculture land"/"Vadi"/"Kheti" -> "Village / Agricultural land"; "NA land" -> "Non-agricultural (NA) land"; "Godown" -> "Warehouse"; "Commercial"/"Retail" -> "Showrooms".
+  modes is a list from "buy", "sell", "lease". Map: "Sale"/"Sell"/"Selling" -> "sell"; "Purchase"/"Buy"/"Buying" -> "buy"; "Rent"/"Rental"/"Lease"/"Leasing"/"Renting" -> "lease". "Rent & Sale" means ["lease","sell"]. "Purchase & Sell" means ["buy","sell"].
+  If the card lists property types but no modes at all, use ["buy","sell"].
+  If a mode line clearly applies to every listed type (a strip like "Rent & Sale" under the list), give that same modes list to every category.
+  Return [] if the card does not say what they deal in. Never guess a category that is not printed.
 - Use an empty string "" for anything not visible on the card. Never invent a value.`;
 
 const LAND_PROMPT = `You are reading a message a property broker in Gujarat, India sent about ONE piece of land. It is written informally in Gujarati, in Gujarati words typed with English letters, or a mix. Spacing and punctuation are erratic (e.g. "T . P . 214", "6,860 /- var che").
@@ -172,14 +189,49 @@ const digits = v => {
 };
 const intOnly = v => str(v).replace(/\D/g, '');
 
+const MODES = ['buy', 'sell', 'lease'];
+// digits and spacing only, with a leading +91 country code dropped
+const phone = v => {
+  let s = str(v).replace(/[^\d\s]/g, '').replace(/\s+/g, ' ').trim();
+  const d = s.replace(/\D/g, '');
+  if (d.length === 12 && d.startsWith('91')) {
+    const stripped = s.replace(/^9\s*1\s*/, '').trim();
+    s = stripped.replace(/\D/g, '').length === 10 ? stripped : d.slice(2);
+  }
+  return s;
+};
+
 function shapeCard(o) {
+  const name = str(o.name), name2 = str(o.name2);
+  const mobile = phone(o.mobile), mobile2 = phone(o.mobile2);
   return {
-    name: str(o.name),
-    mobile: str(o.mobile),
+    name,
+    mobile,
+    // a second contact only counts if it actually adds something new
+    name2: name2 && name2.toLowerCase() !== name.toLowerCase() ? name2 : '',
+    mobile2: mobile2 && mobile2 !== mobile ? mobile2 : '',
     email: str(o.email).toLowerCase(),
     company: str(o.company),
-    address: str(o.address)
+    address: str(o.address),
+    rera: str(o.rera),
+    deals: shapeDeals(o.deals)
   };
+}
+
+function shapeDeals(list) {
+  if (!Array.isArray(list)) return [];
+  const out = {};
+  list.forEach(d => {
+    if (!d || typeof d !== 'object') return;
+    const cat = oneOf(d.category, CARD_CATEGORIES);
+    if (!cat) return;
+    const modes = Array.isArray(d.modes)
+      ? d.modes.map(m => str(m).toLowerCase()).filter(m => MODES.includes(m))
+      : [];
+    if (!modes.length) return;
+    out[cat] = [...new Set([...(out[cat] || []), ...modes])];
+  });
+  return Object.entries(out).map(([category, modes]) => ({ category, modes }));
 }
 
 const UNITS = ['Sq. Yard', 'Sq. Feet', 'Sq. Meter', 'Bigha', 'Acre', 'Hectare'];
