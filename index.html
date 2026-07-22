@@ -313,6 +313,31 @@
   .btn-broker-view:hover{background:var(--gold-tint);border-color:var(--gold);transform:translateY(-1px)}
   .br-edit-btn{align-self:center;white-space:nowrap;padding:9px 16px;border-radius:10px;border:1px solid var(--line-strong);background:#fff;color:var(--gold-deep);font-weight:700;font-size:13px;transition:.12s}
   .br-edit-btn:hover{background:var(--gold-tint);border-color:var(--gold);transform:translateX(2px)}
+  /* paste a broker message */
+  .msg-card{margin-bottom:18px;border:2px dashed var(--gold);background:linear-gradient(135deg,var(--gold-tint),#fffdf6)}
+  .msg-head{display:flex;align-items:center;gap:11px;padding:15px 18px;cursor:pointer;user-select:none;flex-wrap:wrap}
+  .msg-title{font-weight:800;font-size:15px;white-space:nowrap}
+  .msg-sub{font-size:12.5px;color:var(--muted);font-weight:600}
+  .msg-arrow{margin-left:auto;font-size:11px;color:var(--muted);transition:.2s}
+  .msg-card.open .msg-arrow{transform:rotate(180deg)}
+  .msg-body{display:none;padding:0 18px 18px}
+  .msg-card.open .msg-body{display:block}
+  .msg-body textarea{width:100%;padding:13px;border-radius:11px;border:1px solid var(--line-strong);background:#fff;
+    font-family:inherit;font-size:14px;line-height:1.5;resize:vertical;min-height:120px}
+  .msg-body textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(191,155,48,.15);outline:none}
+  .msg-actions{display:flex;align-items:center;gap:13px;flex-wrap:wrap;margin-top:12px}
+  .msg-btn{display:inline-flex;align-items:center;gap:8px;padding:14px 24px;border-radius:12px;border:none;
+    background:linear-gradient(145deg,var(--gold-soft),var(--gold-deep));color:#231b0e;font-weight:800;font-size:15px;
+    box-shadow:0 3px 10px rgba(165,132,42,.32);transition:.15s;white-space:nowrap}
+  .msg-btn:hover{filter:brightness(1.05);transform:translateY(-1px)}
+  .msg-btn:disabled{opacity:.55;cursor:default;transform:none;filter:none}
+  .msg-status{font-size:13px;font-weight:700;color:var(--muted);flex:1;min-width:150px}
+  .msg-status.ok{color:#2f6b45}
+  .msg-status.err{color:#a5462f}
+  .msg-note{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.45}
+  .field-filled input,.field-filled select,.field-filled textarea{background:#fffbe9;border-color:var(--gold)!important;
+    animation:fillGlow 1.6s ease}
+  @keyframes fillGlow{0%{background:var(--gold-soft)}100%{background:#fffbe9}}
   /* visiting-card scan */
   .card-scan{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
     margin:0 0 18px;padding:16px 18px;border-radius:13px;
@@ -652,6 +677,23 @@
     <div class="view" id="v-add">
       <a class="back-link" onclick="goDash()"><span class="ba">←</span> Back to lands</a>
       <div class="page-head"><div><h2 id="formTitle">Add a New Land</h2><p>Fill what you know now — you can edit the rest later.</p></div></div>
+
+      <!-- 0. PASTE A BROKER MESSAGE -->
+      <div class="form-card msg-card" id="msgCard">
+        <div class="msg-head" onclick="msgToggle()">
+          <span class="msg-title">💬 Paste a broker's message</span>
+          <span class="msg-sub" id="msgSub">Fills the form for you — you check it after</span>
+          <span class="msg-arrow">▼</span>
+        </div>
+        <div class="msg-body">
+          <textarea id="f_msg" rows="6" placeholder="Paste the WhatsApp message here, e.g.&#10;&#10;Moje :- Kudasan ,&#10;Final plot area :- 6,860 /- var che&#10;T . P . 3 ,&#10;Zone :- C 4 ,&#10;24 , miter road touch che ,&#10;4 , Ni F S I Che ,&#10;With . N . A . F . P . &amp; Possession sathe che"></textarea>
+          <div class="msg-actions">
+            <button type="button" class="msg-btn" id="msgBtn" onclick="msgRead()">✨ Read &amp; fill the form</button>
+            <span class="msg-status" id="msgStatus"></span>
+          </div>
+          <div class="msg-note">One land per message. Anything already typed in the form stays — only empty boxes get filled. Always check the details before saving.</div>
+        </div>
+      </div>
 
       <div class="form-card">
 
@@ -1281,6 +1323,85 @@
       '<div class="btv-row"><span class="btv-cat">'+cat+'</span><span class="btv-pills">'+
       ['buy','sell','lease'].filter(m=>modes.includes(m)).map(m=>'<span class="btv '+m+'">'+MODE_WORD[m]+'</span>').join('')+
       '</span></div>').join('');
+  }
+
+  /* ===== paste a broker message -> fills the land form (never saves) ===== */
+  function msgToggle(){document.getElementById('msgCard').classList.toggle('open');}
+  function msgStatus(txt,kind){
+    const el=document.getElementById('msgStatus');if(!el)return;
+    el.className='msg-status'+(kind?' '+kind:'');el.textContent=txt;
+  }
+  /* short zone code from the server -> the matching dropdown option */
+  function zoneOption(code){
+    if(!code)return '';
+    const sel=f('zone');if(!sel)return '';
+    const opt=[...sel.options].find(o=>o.value&&o.value.toUpperCase().startsWith(code.toUpperCase()+' ('));
+    return opt?opt.value:'';
+  }
+  const TYPE_OPTION={NA:'NA (Non-Agriculture)',A:'A (Agriculture)',TP:'TP (Town Planning)',DP:'DP (Draft Planning)'};
+
+  async function msgRead(){
+    const box=f('msg'),btn=document.getElementById('msgBtn');
+    const text=(box.value||'').trim();
+    if(!text){msgStatus('Paste the message first.','err');return;}
+    btn.disabled=true;msgStatus('Reading the message…');
+    try{
+      const res=await fetch('/api/scan',{
+        method:'POST',headers:{'content-type':'application/json'},
+        body:JSON.stringify({mode:'land',text})
+      });
+      let out={};try{out=await res.json();}catch(e){}
+      if(!res.ok)throw new Error(out.error||'Could not read that message.');
+      const filled=msgApply(out);
+      if(!filled.length)msgStatus('Nothing new found — the form already has these details, or the message did not mention them.','err');
+      else msgStatus('Filled '+filled.length+' field'+(filled.length>1?'s':'')+': '+filled.join(', ')+'. Check them, then save.','ok');
+    }catch(err){
+      msgStatus(err.message||'Could not read that message.','err');
+    }finally{btn.disabled=false;}
+  }
+
+  /* fill only EMPTY boxes, so a re-read never overwrites what you typed */
+  function msgApply(d){
+    const filled=[];
+    const mark=el=>{const w=el.closest('.field')||el.parentElement;if(w){w.classList.add('field-filled');setTimeout(()=>w.classList.remove('field-filled'),2600);}};
+    const setText=(key,val,label)=>{
+      if(!val)return;const el=f(key);if(!el||el.value.trim())return;
+      el.value=val;mark(el);filled.push(label);
+    };
+    const setNum=(key,val,label)=>{
+      if(!val)return;const el=f(key);if(!el||el.value.trim())return;
+      el.value=val;fmtNum(el);mark(el);filled.push(label);
+    };
+    const setSel=(key,val,label)=>{
+      if(!val)return;const el=f(key);if(!el)return;
+      // a select counts as untouched while it is still on its first option
+      if(el.selectedIndex>0)return;
+      if(![...el.options].some(o=>o.value===val))return;
+      if(el.value===val)return;          // already showing it — nothing to report
+      el.value=val;mark(el);filled.push(label);
+    };
+
+    setText('village',d.village,'village');
+    setText('district',d.district,'district');
+    setSel('type',TYPE_OPTION[d.landType]||'','land type');
+    setText('survey',d.survey,'survey no.');
+    setText('tp',d.tp,'TP no.');
+    setText('fp',d.fp,'FP no.');
+    if(d.surveyArea){setNum('sarea',d.surveyArea,'survey area');if(d.surveyUnit)f('sunit').value=d.surveyUnit;}
+    if(d.fpArea){setNum('farea',d.fpArea,'FP area');if(d.fpUnit)f('funit').value=d.fpUnit;}
+    setSel('zone',zoneOption(d.zone),'zone');
+    if(d.fsi&&!f('fsitotal').value.trim()){f('fsitotal').value=d.fsi;mark(f('fsitotal'));filled.push('total FSI');}
+    if(d.rate){setNum('rate',d.rate,'rate');if(d.rateUnit)f('runit').value='per '+d.rateUnit;}
+    if(d.remark){
+      const el=f('remark');
+      if(!el.value.trim()){el.value=d.remark;mark(el);filled.push('remarks');}
+      else if(!el.value.includes(d.remark)){el.value=el.value.trim()+'\n'+d.remark;mark(el);filled.push('remarks (added)');}
+    }
+    if(f('village').value&&!AREAS.some(a=>a.toLowerCase()===f('village').value.toLowerCase())){
+      AREAS.push(f('village').value);areaSort();saveAreas();
+    }
+    calcTotal();
+    return filled;
   }
 
   /* ===== visiting-card scan (fills the broker form, never saves) ===== */
@@ -2193,6 +2314,9 @@
     ['district','village','survey','tp','fp','sarea','farea','loc','rate','nrate','deal','token','fpct','months','fsifree','fsipaid','fsitotal','remark'].forEach(k=>f(k).value='');
     f('state').value='Gujarat';f('type').selectedIndex=0;f('sunit').selectedIndex=0;f('funit').selectedIndex=0;f('runit').selectedIndex=0;f('zone').selectedIndex=0;
     document.getElementById('rateTotal').textContent='—';f('tokdate').value='';f('interval').value='1';clearBroker();f('bsearch').value='';updatePin();
+    f('msg').value='';msgStatus('');document.getElementById('msgCard').classList.remove('open');
+    const re=document.getElementById('rateEq'),ne=document.getElementById('nrateEq');
+    if(re)re.textContent='';if(ne)ne.textContent='';
   }
   // Indian-style live comma formatting for number text inputs
   function fmtNum(el){
