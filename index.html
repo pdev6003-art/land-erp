@@ -535,6 +535,7 @@
   .mini-add{padding:9px 13px;border-radius:9px;border:1px solid var(--line-strong);background:var(--gold-tint);color:var(--gold-deep);font-weight:700;font-size:13px;white-space:nowrap;transition:.12s}
   .mini-add:hover{border-color:var(--gold)}
   /* rate slider */
+  .sheet-btn{white-space:nowrap;align-self:center}
   .rate-eq{font-size:12.5px;font-weight:700;color:var(--gold-deep);margin-top:7px;min-height:16px}
   .rate-units{display:flex;gap:8px;margin-bottom:14px}
   .rate-units .chip{flex:0 0 auto}
@@ -1004,6 +1005,7 @@
     <div class="view" id="v-calc">
       <div class="page-head">
         <div><h2>Construction Cost Calculator</h2><p>Approximate construction cost — step by step, as per your formula.</p></div>
+        <button class="btn-ghost sheet-btn" onclick="blankSheet()">🖨️ Blank worksheet</button>
       </div>
 
       <div class="form-card" style="margin-bottom:18px;overflow:visible;position:relative;z-index:16">
@@ -2750,6 +2752,203 @@
       (cost?`<div class="cap-row"><div><b>− Total project cost</b><div class="il-sub">land + construction + paid &amp; other FSI (from calculation above)</div></div><div style="text-align:right"><div class="cap-v" style="color:var(--red)">− ${words(Math.round(cost))}</div><div class="il-sub">${perYdF(cost)}</div></div></div>`:
       `<div class="cap-row"><div><b>− Total project cost</b><div class="il-sub">complete the calculation above to include cost</div></div><div class="cap-v">—</div></div>`)+
       `<div class="cap-grand"><div><div class="gl">TOTAL PROFIT</div><div style="font-size:11.5px;color:var(--muted)">revenue − project cost${cost&&totalRev?' · margin '+(profit/totalRev*100).toFixed(1)+'%':''}</div></div><div style="text-align:right"><div class="gv" style="color:${profit>=0?'var(--green)':'var(--red)'}">${cost?words(Math.round(profit)):'—'}</div><div class="il-sub" style="font-weight:700">${cost?perYdF(profit):''}</div></div></div>`;
+  }
+
+  /* ===== blank worksheet — printable paper copy of the calculator =====
+     Opens a print-ready A4 sheet with an empty box for every figure the
+     calculator produces, in the same order, so it can be copied by hand. */
+  function blankSheet(){
+    const w=window.open('','_blank');
+    if(!w){alert('Your browser blocked the print window. Allow pop-ups for this site and tap the button again.');return;}
+
+    const L=(label,hint,unit)=>
+      `<div class="ln"><div class="lb">${label}${hint?'<i>'+hint+'</i>':''}</div><div class="bx">${unit?'<u>'+unit+'</u>':''}</div></div>`;
+    const L2=(label,hint)=>
+      `<div class="ln"><div class="lb">${label}${hint?'<i>'+hint+'</i>':''}</div><div class="bx sm"><u>total</u></div><div class="bx sm"><u>per sellable sq yd</u></div></div>`;
+    const sec=(n,t,sub)=>`<div class="sec"><span class="sn">${n}</span>${t}${sub?'<i>'+sub+'</i>':''}</div>`;
+    const rows=(cols,n)=>{
+      let h='<table class="gt"><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr>';
+      for(let i=0;i<n;i++)h+='<tr>'+cols.map(()=>'<td></td>').join('')+'</tr>';
+      return h+'</table>';
+    };
+
+    const REV=['1) Basic price','2) AMC / AUDA','3) Parking charges','4) Advance maintenance',
+               '5) Legal charges','6) PLC charges','7) Terrace charges'];
+
+    const html=`<!doctype html><html><head><meta charset="utf-8">
+<title>Calculation worksheet</title>
+<style>
+  @page{size:A4;margin:11mm 10mm}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;color:#1c1710;font-size:10.2px;line-height:1.32}
+  .pg{page-break-after:always}
+  .pg:last-child{page-break-after:auto}
+  .hd{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2.5px solid #bf9b30;padding-bottom:6px;margin-bottom:9px}
+  .hd h1{font-size:15px;letter-spacing:-.2px}
+  .hd .s{font-size:9px;color:#6b6252;margin-top:2px}
+  .hd .pn{font-size:9px;color:#6b6252;font-weight:700}
+  .sec{background:#f6efdd;border-left:3px solid #bf9b30;padding:4px 8px;font-weight:700;font-size:10.5px;margin:9px 0 5px;display:flex;align-items:baseline;gap:6px}
+  .sec:first-of-type{margin-top:0}
+  .sec .sn{background:#bf9b30;color:#fff;border-radius:3px;padding:0 5px;font-size:9px}
+  .sec i{font-weight:400;font-style:normal;color:#6b6252;font-size:9px}
+  .ln{display:flex;align-items:stretch;gap:7px;margin-bottom:4px}
+  .lb{flex:1;display:flex;flex-direction:column;justify-content:center;padding:3px 0}
+  .lb i{font-style:normal;color:#7b7263;font-size:8.6px;margin-top:1px}
+  .bx{width:118px;flex-shrink:0;border:1px solid #b9ad92;border-radius:3px;background:#fffdf8;
+      min-height:23px;position:relative}
+  .bx.sm{width:96px}
+  .bx u{position:absolute;bottom:1px;right:4px;font-size:7.2px;color:#a79c85;text-decoration:none;font-style:italic}
+  .gt{width:100%;border-collapse:collapse;margin-bottom:5px}
+  .gt th{background:#f6efdd;border:1px solid #b9ad92;font-size:8.8px;padding:3px 4px;text-align:left;font-weight:700}
+  .gt td{border:1px solid #b9ad92;height:20px;background:#fffdf8}
+  .note{font-size:8.6px;color:#7b7263;margin:3px 0 7px;font-style:italic}
+  .tot{background:#f6efdd;border:1.5px solid #bf9b30!important}
+  .ft{margin-top:10px;border-top:1px solid #ddd2ba;padding-top:5px;font-size:8.4px;color:#8d8474;display:flex;justify-content:space-between}
+  @media print{.noprint{display:none}}
+  .noprint{position:fixed;top:12px;right:12px;background:#bf9b30;color:#fff;border:none;
+    padding:11px 20px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+</style></head><body>
+<button class="noprint" onclick="window.print()">🖨️ Print / Save as PDF</button>
+
+<!-- ================= PAGE 1 ================= -->
+<div class="pg">
+  <div class="hd">
+    <div><h1>Construction Cost Calculation — Worksheet</h1>
+      <div class="s">Available Land Records · fill from the calculator screen</div></div>
+    <div class="pn">Page 1 of 3</div>
+  </div>
+
+  ${sec('','Land reference')}
+  <div class="ln"><div class="lb"><b>Village / Moje</b></div><div class="bx" style="width:180px"></div>
+    <div class="lb" style="flex:0 0 auto;padding-left:8px"><b>Date</b></div><div class="bx" style="width:110px"></div></div>
+  <div class="ln"><div class="lb"><b>Survey no.</b></div><div class="bx" style="width:110px"></div>
+    <div class="lb" style="flex:0 0 auto;padding-left:8px"><b>TP / FP no.</b></div><div class="bx" style="width:110px"></div>
+    <div class="lb" style="flex:0 0 auto;padding-left:8px"><b>Broker</b></div><div class="bx" style="width:130px"></div></div>
+
+  ${sec('','Land &amp; FSI inputs')}
+  ${L('Land area','','sq. yard')}
+  ${L('Super built-up','','%')}
+  ${L('Free FSI')}
+  ${L('Paid FSI')}
+  <div class="note">Other FSI (TDR / TOZ) — one row per type</div>
+  ${rows(['Other FSI type','FSI'],3)}
+
+  ${sec('','Cost inputs')}
+  ${L('Land cost','total','₹')}
+  ${L('Construction rate','circle the unit &nbsp; per sq yd &nbsp;/&nbsp; per sq ft &nbsp;/&nbsp; per sq m','₹')}
+  ${L('Jantri rate','','₹ / sq m')}
+  ${L('Paid FSI cost','% of jantri value','%')}
+  ${L('Other FSI cost','% of jantri value','%')}
+
+  ${sec('1','Calculation — FSI area','sq. yard')}
+  ${L('1) Free FSI area','land area × free FSI','sq yd')}
+  ${L('2) Paid FSI area','land area × paid FSI','sq yd')}
+  ${L('3) Other FSI area','land area × other FSI','sq yd')}
+  ${L('4) Total / passing FSI','free + paid + other')}
+  <div class="ln"><div class="lb"><b>Total constructable area</b><i>all FSI areas added</i></div><div class="bx tot"><u>sq yd</u></div></div>
+
+  ${sec('2','Sellable / super built-up')}
+  ${L('5) Sellable FSI','total FSI ÷ (100 − super built-up %)')}
+  ${L('6) Sellable area','land area × sellable FSI','sq yd')}
+  <div class="ft"><span>Available Land Records — calculation worksheet</span><span>Page 1 of 3</span></div>
+</div>
+
+<!-- ================= PAGE 2 ================= -->
+<div class="pg">
+  <div class="hd">
+    <div><h1>Costs, Flat Mix &amp; Revenue</h1>
+      <div class="s">Village / Moje ______________________  ·  Date ______________</div></div>
+    <div class="pn">Page 2 of 3</div>
+  </div>
+
+  ${sec('3','Costs','total · per sellable sq yd')}
+  ${L2('7) Land cost','land cost ÷ sellable area')}
+  ${L2('8) Construction cost','rate × sellable area in that unit')}
+  ${L2('9) Paid FSI cost','land sq m × paid FSI × jantri × paid %')}
+  ${L2('10) Other FSI cost','land sq m × other FSI × jantri × other %')}
+  <div class="ln"><div class="lb"><b>TOTAL PROJECT COST</b><i>land + construction + paid FSI + other FSI</i></div>
+    <div class="bx sm tot"><u>total</u></div><div class="bx sm tot"><u>per sellable sq yd</u></div></div>
+
+  ${sec('4','Flat mix planner','uses total sellable area')}
+  ${rows(['Unit type','No. of units','Area per unit (sq yd)','Total area (sq yd)'],7)}
+  <div class="ln"><div class="lb"><b>Total planned area</b><i>must not exceed sellable area</i></div><div class="bx tot"><u>sq yd</u></div></div>
+
+  ${sec('5','Revenue — per unit type','one block per type; flats in sq yd, showrooms &amp; offices in sq ft')}
+  <div class="note">Fill one block per unit type from the mix above.</div>
+  ${[1,2].map(i=>`
+    <div class="ln" style="margin-top:${i>1?'7px':'0'}"><div class="lb"><b>Unit type ${i}</b></div>
+      <div class="bx" style="width:150px"><u>type</u></div>
+      <div class="bx sm"><u>no. of units</u></div></div>
+    <table class="gt"><tr><th style="width:46%">Revenue head</th><th>Per unit</th><th>Total</th></tr>
+    ${REV.map(r=>`<tr><td style="padding-left:5px;font-size:9px">${r}</td><td></td><td></td></tr>`).join('')}
+    <tr><td style="padding-left:5px;font-weight:700;background:#f6efdd">Type total</td><td class="tot"></td><td class="tot"></td></tr>
+    </table>`).join('')}
+  <div class="ft"><span>Available Land Records — calculation worksheet</span><span>Page 2 of 3</span></div>
+</div>
+
+<!-- ================= PAGE 3 ================= -->
+<div class="pg">
+  <div class="hd">
+    <div><h1>Profitability &amp; Selling Plan</h1>
+      <div class="s">Village / Moje ______________________  ·  Date ______________</div></div>
+    <div class="pn">Page 3 of 4</div>
+  </div>
+
+  ${sec('6','Profitability')}
+  ${L('Total revenue','all unit types added together','₹')}
+  ${L('− Total project cost','from page 2','₹')}
+  <div class="ln"><div class="lb"><b>TOTAL PROFIT</b><i>revenue − project cost</i></div><div class="bx tot"><u>₹</u></div></div>
+  ${L('Margin','profit ÷ revenue','%')}
+
+  ${sec('A','Selling window')}
+  ${L('Selling start date')}
+  ${L('Selling end date')}
+  ${L('Selling period','end − start','days')}
+
+  ${sec('B','Sales planning','% likely to be sold in this window')}
+  ${rows(['Unit type','% likely sold','Price','Expected sale value'],9)}
+  <div class="ln"><div class="lb"><b>Total expected sale value</b></div><div class="bx tot"><u>₹</u></div></div>
+  <div class="ft"><span>Available Land Records — calculation worksheet</span><span>Page 3 of 4</span></div>
+</div>
+
+<!-- ================= PAGE 4 ================= -->
+<div class="pg">
+  <div class="hd">
+    <div><h1>Payment Collection &amp; Capital</h1>
+      <div class="s">Village / Moje ______________________  ·  Date ______________</div></div>
+    <div class="pn">Page 4 of 4</div>
+  </div>
+
+  ${sec('C','Payment collection')}
+  ${L('Collection start date')}
+  ${L('Collection end date')}
+  ${L('Collection period','end − start','days')}
+  ${L('Payment received in this period','% of sale value','%')}
+  ${L('Received by end date','','₹')}
+  ${L('Remaining to collect','','₹')}
+  ${L('Remaining paid over','equally','months')}
+  ${L('Per month','','₹')}
+
+  ${sec('D','Capital summary')}
+  ${L('Total project cost','','₹')}
+  ${L('Expected sale value','','₹')}
+  ${L('Received by collection end date','','₹')}
+  ${L('Still to collect','','₹')}
+  <div class="ln"><div class="lb"><b>CAPITAL FROM YOUR SIDE</b><i>project cost − payments received by then</i></div><div class="bx tot"><u>₹</u></div></div>
+  ${L('After all planned collections','project cost − total expected sale value','₹')}
+
+  ${sec('','Notes')}
+  <table class="gt"><tr><td style="height:96px"></td></tr></table>
+  <div class="ln" style="margin-top:14px">
+    <div class="lb"><b>Calculated by</b></div><div class="bx" style="width:150px"></div>
+    <div class="lb" style="flex:0 0 auto;padding-left:10px"><b>Checked by</b></div><div class="bx" style="width:150px"></div></div>
+  <div class="ft"><span>Available Land Records — calculation worksheet</span><span>Page 4 of 4</span></div>
+</div>
+</body></html>`;
+
+    w.document.open();w.document.write(html);w.document.close();
+    // let the layout settle before the print dialog opens
+    w.onload=()=>setTimeout(()=>{try{w.focus();w.print();}catch(e){}},350);
   }
 
   /* ===== Capital & Sales Planner ===== */
